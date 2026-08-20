@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+# Studio uploads are data, not source. The directory and its README are tracked;
+# the photographs are not. See uploads/README.md for why this is not under public/.
+/uploads/*
+!/uploads/.gitkeep
+!/uploads/README.md

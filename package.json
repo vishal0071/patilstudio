@@ -1,0 +1,40 @@
+{
+  "name": "patilstudio",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ganesh Patil Photography \u2014 public website and CMS. Separate project; shares only the server and the Postgres engine with GalleryFlow.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@11.15.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3002",
+    "typecheck": "prisma generate && tsc --noEmit",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "node --env-file-if-exists=.env node_modules/prisma/build/index.js migrate dev",
+    "db:deploy": "node --env-file-if-exists=.env node_modules/prisma/build/index.js migrate deploy",
+    "db:studio": "node --env-file-if-exists=.env node_modules/prisma/build/index.js studio",
+    "clean": "rm -rf .next node_modules/.prisma *.tsbuildinfo",
+    "import:photos": "node --env-file-if-exists=.env scripts/import-photos.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "next": "^15.0.0",
+    "prisma": "^6.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.0"
+  }
+}

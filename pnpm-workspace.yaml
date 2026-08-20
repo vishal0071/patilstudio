@@ -1,0 +1,24 @@
+# Not a workspace — this project is a single package. The file exists because
+# pnpm 11 reads install settings from HERE rather than from .npmrc (a `.npmrc`
+# node-linker line is silently ignored, which is a quiet way to lose both settings
+# below and only find out inside a container).
+
+# A flat, real-directory node_modules instead of symlinks into .pnpm/.
+#
+# This is for the Dockerfile's benefit. Under the default linker,
+# `node_modules/prisma` is a symlink into a version-stamped .pnpm/ path, so
+# `COPY --from=builder` lands a dangling link and the entrypoint's `migrate deploy`
+# dies with "Cannot find module '@prisma/engines'". Hoisting costs this
+# single-package site nothing; GalleryFlow's workspace keeps the strict default,
+# where it earns its keep.
+nodeLinker: hoisted
+
+# Without this Prisma's postinstall never runs, no query engine is downloaded, and
+# the failure surfaces at runtime as "Prisma Client did not initialize yet".
+# Mirrors the same list in GalleryFlow's pnpm-workspace.yaml.
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  prisma: true
+  # Next.js uses sharp for image optimization.
+  sharp: true

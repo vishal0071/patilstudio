@@ -1,0 +1,101 @@
+# Patil Studio — its own compose project.
+#
+# Deliberately NOT a service inside GalleryFlow's compose file: a
+# `docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build` for
+# the SaaS must never rebuild or stop this site, and vice versa.
+#
+#   docker compose up -d --build
+#
+# It attaches to GalleryFlow's existing bridge network so that (a) Traefik, which
+# routes by Host header, can reach this container, and (b) this container can reach
+# the shared Postgres as `postgres:5432`. Both directions require that network.
+#
+# Requires in .env: DATABASE_URL and ADMIN_PASSWORD (see .env.example). The database
+# and its role must exist first — run infrastructure/postgres/001-create-database.sql
+# once.
+
+name: patilstudio
+
+services:
+  site:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # `images.remotePatterns` is read when Next BUILDS, so an image CDN host set
+        # only in `environment:` below is silently ignored. It has to come in here.
+        IMAGE_CDN_HOSTS: ${IMAGE_CDN_HOSTS:-}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      HOSTNAME: 0.0.0.0
+      # Points at the `patilstudio` database in GalleryFlow's Postgres container.
+      # Host `postgres` resolves because compose gives every service a network
+      # alias, and this container is on that same network.
+      DATABASE_URL: ${DATABASE_URL}
+      SITE_BASE_URL: https://${SITE_DOMAIN}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      # Admin panel. With no ADMIN_PASSWORD the panel refuses every sign-in rather
+      # than falling open, so /admin is simply unusable until this is set.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
+      # Where uploaded photographs are written — must match the volume mount below.
+      UPLOAD_DIR: /app/uploads
+      IMAGE_CDN_HOSTS: ${IMAGE_CDN_HOSTS:-}
+      # Optional enquiry notification (Resend). Unset simply logs each enquiry; the
+      # row is in Postgres either way.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      INQUIRY_NOTIFY_TO: ${INQUIRY_NOTIFY_TO:-}
+      INQUIRY_NOTIFY_FROM: ${INQUIRY_NOTIFY_FROM:-}
+    volumes:
+      # LOAD-BEARING. Uploaded photographs are the only data this container owns that
+      # is not in Postgres. Without this volume every `docker compose up --build`
+      # destroys the studio's entire image library, and nothing warns you.
+      #
+      # The directory is deliberately outside `public/`: Next indexes `public` at build
+      # time, so a file written there at runtime is never served, and the Dockerfile's
+      # `COPY /app/public` would shadow a mount over it anyway. See uploads/README.md.
+      - uploads:/app/uploads
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3002/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    labels:
+      - traefik.enable=true
+      # Load-bearing: this container is on one network today, but Traefik picks the
+      # wrong one the moment that changes, and the symptom is a 502 with nothing in
+      # the logs to explain it. Name it explicitly.
+      - traefik.docker.network=galleryflow_galleryflow
+      # Router names must be unique across the whole Traefik instance — `web`,
+      # `app`, `api`, `web-secure`, `app-secure`, `api-secure` are already taken by
+      # GalleryFlow. Hence the `patil-` prefix.
+      - traefik.http.routers.patil-secure.rule=Host(`${SITE_DOMAIN}`) || Host(`www.${SITE_DOMAIN}`)
+      - traefik.http.routers.patil-secure.entrypoints=websecure
+      - traefik.http.routers.patil-secure.tls.certresolver=le
+      - traefik.http.services.patil.loadbalancer.server.port=3002
+      # HTTP->HTTPS comes free from the `web` entrypoint redirection already set in
+      # GalleryFlow's infrastructure/traefik/traefik.prod.yml. Do not add another.
+      #
+      # LOCAL DEV against the base (non-prod) GalleryFlow stack has no `websecure`
+      # entrypoint and no ACME resolver; comment the two lines above and use:
+      #   - traefik.http.routers.patil.rule=Host(`patilstudio.local`)
+      #   - traefik.http.routers.patil.entrypoints=web
+    networks:
+      - galleryflow_galleryflow
+
+volumes:
+  # Named, not a bind mount: the container runs as uid 1001 and Docker seeds a new
+  # named volume with the ownership of the image's own directory, which the Dockerfile
+  # sets. A host bind mount would arrive root-owned and every upload would fail with
+  # EACCES.
+  uploads:
+    name: patil_uploads
+
+networks:
+  # Created by the GalleryFlow compose project (project `galleryflow`, network
+  # `galleryflow`). It must already exist — `docker network ls | grep galleryflow`.
+  galleryflow_galleryflow:
+    external: true

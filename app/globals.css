@@ -1,0 +1,737 @@
+@import 'tailwindcss';
+
+/* Tailwind v4, CSS-first — no tailwind.config, same arrangement as GalleryFlow. */
+@source "../app";
+@source "../lib";
+@source "../components";
+
+/* ──────────────────────────────────────────────────────────────
+   Design tokens
+   The palette is deliberately narrow: near-black, warm ivory, one
+   muted gold. Photographs supply every other colour on the page, and
+   a second accent would compete with them.
+   ────────────────────────────────────────────────────────────── */
+@theme {
+  --font-serif: var(--font-cormorant), 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-ink: #0a0a0b;
+  --color-ink-soft: #101013;
+  --color-charcoal: #17171b;
+  --color-charcoal-light: #22222a;
+  --color-ivory: #f7f4ee;
+  --color-ivory-dim: #ebe5db;
+  --color-stone: #8d867c;
+  --color-gold: #b08d57;
+  --color-gold-soft: #cbae82;
+  --color-gold-dim: #6d5836;
+
+  --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  --background: var(--color-ivory);
+  --foreground: var(--color-ink);
+  --edge: clamp(1.25rem, 5vw, 6rem);
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Sticky nav is ~5rem; anchor targets must clear it. */
+  scroll-padding-top: 5rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-weight: 350;
+  /* No section may push the viewport sideways — checked on 320px. */
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Typography
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  .display-hero {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    font-size: clamp(2.9rem, 9.5vw, 7.5rem);
+    line-height: 0.94;
+    letter-spacing: -0.02em;
+  }
+
+  .display-1 {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    font-size: clamp(2.25rem, 5.6vw, 4.5rem);
+    line-height: 1.03;
+    letter-spacing: -0.015em;
+  }
+
+  .display-2 {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+  }
+
+  .display-3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(1.3rem, 2vw, 1.6rem);
+    line-height: 1.25;
+  }
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+  }
+
+  .lede {
+    font-size: clamp(1rem, 1.15vw, 1.1875rem);
+    line-height: 1.75;
+    font-weight: 300;
+  }
+
+  .body-copy {
+    font-size: 0.9688rem;
+    line-height: 1.8;
+    font-weight: 350;
+  }
+
+  /* Serif numerals for stats and step counters. */
+  .numeral {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  /* ── Layout ── */
+  .edge {
+    padding-inline: var(--edge);
+  }
+
+  .shell {
+    width: 100%;
+    max-width: 88rem;
+    margin-inline: auto;
+    padding-inline: var(--edge);
+  }
+
+  .shell-narrow {
+    width: 100%;
+    max-width: 58rem;
+    margin-inline: auto;
+    padding-inline: var(--edge);
+  }
+
+  .section {
+    padding-block: clamp(4.5rem, 9vw, 9rem);
+  }
+
+  .hairline {
+    height: 1px;
+    background: currentColor;
+    opacity: 0.12;
+  }
+
+  /* ── Buttons ──
+     Two shapes only: a filled rectangle and an underlined text link.
+     Anything more ornamented starts to look like a marketplace. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    /* A long label (the Instagram handle) must wrap inside the button rather than
+       widen its row — at 390px that was pushing the page 2px past the viewport. */
+    max-width: 100%;
+    text-align: center;
+    text-wrap: balance;
+    /* 48px min target — thumb-sized on mobile. */
+    min-height: 3rem;
+    padding: 0.875rem 1.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    transition:
+      background-color 0.45s var(--ease-cinematic),
+      color 0.45s var(--ease-cinematic),
+      border-color 0.45s var(--ease-cinematic),
+      opacity 0.3s ease;
+  }
+
+  .btn-gold {
+    background: var(--color-gold);
+    color: var(--color-ink);
+  }
+  .btn-gold:hover {
+    background: var(--color-gold-soft);
+  }
+
+  .btn-light {
+    background: var(--color-ivory);
+    color: var(--color-ink);
+  }
+  .btn-light:hover {
+    background: #fff;
+  }
+
+  .btn-dark {
+    background: var(--color-ink);
+    color: var(--color-ivory);
+  }
+  .btn-dark:hover {
+    background: var(--color-charcoal-light);
+  }
+
+  .btn-outline-light {
+    border-color: rgb(255 255 255 / 0.4);
+    color: var(--color-ivory);
+  }
+  .btn-outline-light:hover {
+    border-color: var(--color-ivory);
+    background: rgb(255 255 255 / 0.08);
+  }
+
+  .btn-outline-dark {
+    border-color: rgb(10 10 11 / 0.25);
+    color: var(--color-ink);
+  }
+  .btn-outline-dark:hover {
+    border-color: var(--color-ink);
+    background: rgb(10 10 11 / 0.04);
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  /* Underlined text link whose rule wipes in from the left. */
+  .link-quiet {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    position: relative;
+    padding-bottom: 0.375rem;
+  }
+  .link-quiet::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.3;
+    transform-origin: left;
+    transition:
+      transform 0.6s var(--ease-cinematic),
+      opacity 0.4s ease;
+  }
+  .link-quiet:hover::after {
+    opacity: 1;
+    transform: scaleX(1.02);
+  }
+  .link-quiet .arrow {
+    transition: transform 0.5s var(--ease-cinematic);
+  }
+  .link-quiet:hover .arrow {
+    transform: translateX(0.3rem);
+  }
+
+  /* ── Form controls ── */
+  .field {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid rgb(247 244 238 / 0.22);
+    padding: 0.75rem 0;
+    /* 16px stops iOS Safari zooming the viewport on focus. */
+    font-size: 1rem;
+    color: var(--color-ivory);
+    transition: border-color 0.4s var(--ease-cinematic);
+  }
+  .field::placeholder {
+    color: rgb(247 244 238 / 0.35);
+  }
+  .field:focus {
+    outline: none;
+    border-bottom-color: var(--color-gold);
+  }
+  .field-label {
+    display: block;
+    font-size: 0.625rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgb(247 244 238 / 0.5);
+    margin-bottom: 0.25rem;
+  }
+  /* Native pickers render white-on-white in dark forms without this. */
+  .field option {
+    background: var(--color-charcoal);
+    color: var(--color-ivory);
+  }
+  .field[type='date'] {
+    /* Safari refuses to size a bare date input to its container. */
+    min-height: 3rem;
+  }
+  .field[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.5;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Scroll-reveal
+   Elements start hidden and are switched on by an IntersectionObserver
+   (components/ui/reveal.tsx). If JavaScript never runs, the fallback
+   below makes everything visible rather than leaving a blank page.
+   ────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Sections arrive on a perspective tip, not a flat slide — the frame reads as
+     settling into place. 6deg is the ceiling: past about 8deg the text visibly
+     keystones on the way in and starts to look like a slideshow transition. */
+  [data-reveal] {
+    opacity: 0;
+    transform: perspective(1400px) rotateX(6deg) translate3d(0, 1.75rem, -40px);
+    transition:
+      opacity 1.1s var(--ease-cinematic),
+      transform 1.2s var(--ease-cinematic);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  [data-reveal='shown'] {
+    opacity: 1;
+    transform: perspective(1400px) rotateX(0) translate3d(0, 0, 0);
+  }
+
+  /* Slow photographic reveal: the frame wipes open, the image settles. */
+  [data-reveal-image] > * {
+    transform: scale(1.09);
+    transition: transform 1.8s var(--ease-cinematic);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  [data-reveal-image='shown'] > * {
+    transform: scale(1);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── 3D tilt ──
+     Two elements: an outer one holding the perspective, an inner one doing the
+     rotation. Splitting them is what makes the depth real — a single element with
+     `transform: perspective(…) rotateY(…)` rotates in isolation, whereas a shared
+     parent perspective means the card and the label inside it are rendered in the
+     same 3D space, so the label genuinely stands off the surface.
+
+     The rotation values come from components/ui/tilt-engine.tsx as custom properties.
+     CSS owns the motion; the JavaScript only reports where the pointer is. */
+  [data-tilt] {
+    perspective: 900px;
+  }
+
+  [data-tilt-inner] {
+    transform: rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+    transform-style: preserve-3d;
+    /* Short enough to track the pointer, long enough that the return to rest glides
+       rather than snapping. */
+    transition: transform 0.4s var(--ease-cinematic);
+  }
+
+  /* Lifts off the card's surface in the shared 3D space, so it parallaxes against the
+     photograph as the plane turns. */
+  [data-tilt-lift] {
+    transform: translateZ(0);
+    transition: transform 0.5s var(--ease-cinematic);
+  }
+  [data-tilt]:hover [data-tilt-lift] {
+    transform: translateZ(34px);
+  }
+
+  /* Only while a card is actually being tilted — a permanent will-change on every
+     tile would hand the compositor two dozen layers to hold for nothing. */
+  [data-tilt-active] [data-tilt-inner],
+  [data-tilt-active] [data-tilt-lift] {
+    will-change: transform;
+  }
+
+  /* ── Live edit mode ──
+     Every affordance here is an outline or an overlay. Nothing may change box size,
+     margin or font: the whole value of editing on the page is that what the studio
+     judges is the real design, and a dashed border that adds 2px to a heading makes it
+     a slightly different design. */
+  [data-edit-on] {
+    /* Derived from the text's own colour, not a fixed gold: a gold outline on the gold
+       CTA is invisible, and the one field the studio most wants to try renaming is the
+       button. currentColor makes the affordance legible on ink, ivory and gold alike. */
+    outline: 1px dashed color-mix(in srgb, currentColor 55%, transparent);
+    outline-offset: 3px;
+    cursor: text;
+    border-radius: 1px;
+    transition:
+      outline-color 0.2s ease,
+      background-color 0.2s ease;
+  }
+  [data-edit-on]:hover {
+    outline-color: currentColor;
+    background-color: color-mix(in srgb, currentColor 8%, transparent);
+  }
+  [data-edit-on]:focus {
+    outline: 1px solid var(--color-gold);
+    background-color: rgb(176 141 87 / 0.12);
+  }
+  [data-edit-on]:focus-visible {
+    outline-offset: 3px;
+  }
+
+  /* The Replace control over a photograph. Hidden until edit mode is on, so a visitor
+     never sees it even though the markup is always present. */
+  [data-edit-replace] {
+    position: absolute;
+    inset-inline-end: 0.625rem;
+    inset-block-start: 0.625rem;
+    z-index: 5;
+    display: none;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4375rem 0.75rem;
+    background: rgb(10 10 11 / 0.82);
+    border: 1px solid rgb(176 141 87 / 0.6);
+    color: var(--color-ivory);
+    font-size: 0.5625rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+  }
+  [data-edit-replace]:hover {
+    background: var(--color-gold);
+    color: var(--color-ink);
+  }
+
+  /* Turned on by the editor toggling this class on <body>. */
+  .editing [data-edit-replace] {
+    display: inline-flex;
+  }
+  .editing [data-edit-image] {
+    outline: 1px dashed rgb(176 141 87 / 0.4);
+    outline-offset: 2px;
+  }
+
+  /* Film grain — one tiny SVG turbulence tile, no image request. */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.32;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  }
+
+  .hero-scrim {
+    background: linear-gradient(
+      to bottom,
+      rgb(10 10 11 / 0.62) 0%,
+      rgb(10 10 11 / 0.28) 32%,
+      rgb(10 10 11 / 0.42) 68%,
+      rgb(10 10 11 / 0.88) 100%
+    );
+  }
+
+  .card-scrim {
+    background: linear-gradient(to top, rgb(10 10 11 / 0.9) 0%, rgb(10 10 11 / 0.35) 45%, transparent 78%);
+  }
+
+  .animate-scroll-hint {
+    animation: scroll-hint 2.4s var(--ease-cinematic) infinite;
+  }
+  .animate-fade-up {
+    animation: fade-up 1.2s var(--ease-cinematic) both;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.5s ease both;
+  }
+  .animate-zoom-in {
+    animation: zoom-in 0.55s var(--ease-cinematic) both;
+  }
+  .animate-ken-burns {
+    animation: ken-burns 26s ease-out both;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Scroll-driven 3D
+   `animation-timeline` needs no scroll listener and no JavaScript: the
+   compositor drives these from the element's own position. Behind
+   @supports, so a browser without it gets the static layout rather
+   than a broken one — nothing here is load-bearing for legibility.
+   ────────────────────────────────────────────────────────────── */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* The hero photograph tips back and drifts as it leaves, so the copy over it
+       separates in depth instead of scrolling as one flat sheet. The scale ramp is
+       not decoration — tipping a full-bleed plane on rotateX exposes its top edge,
+       and this keeps the frame covered. */
+    .hero-plane {
+      animation: hero-recede linear both;
+      animation-timeline: view();
+      animation-range: contain 0% exit 100%;
+    }
+
+    /* Coverflow: each story panel turns as it crosses its scroll container. Tracks
+       the horizontal track via view(inline), which is why swiping the story feels
+       like turning frames rather than sliding a list. */
+    .story-panel {
+      animation: story-turn linear both;
+      animation-timeline: view(inline);
+    }
+  }
+}
+
+@keyframes hero-recede {
+  from {
+    transform: perspective(1200px) rotateX(0deg) translate3d(0, 0, 0) scale(1.01);
+  }
+  to {
+    transform: perspective(1200px) rotateX(4.5deg) translate3d(0, -4%, -60px) scale(1.14);
+  }
+}
+
+@keyframes story-turn {
+  from {
+    transform: perspective(1100px) rotateY(-15deg) scale(0.93);
+    opacity: 0.6;
+  }
+  45%,
+  55% {
+    transform: perspective(1100px) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: perspective(1100px) rotateY(15deg) scale(0.93);
+    opacity: 0.6;
+  }
+}
+
+@keyframes scroll-hint {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0.85rem);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Comes forward out of depth rather than simply scaling — the photograph reads as
+   being lifted toward the viewer, which is the whole point of a lightbox. */
+@keyframes zoom-in {
+  from {
+    opacity: 0;
+    transform: perspective(1600px) translate3d(0, 1.5rem, -220px) rotateX(5deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1600px) translate3d(0, 0, 0) rotateX(0deg);
+  }
+}
+
+/* A held frame, drifting. Slow enough to read as cinema, not as motion. */
+@keyframes ken-burns {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.14);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Reduced motion — everything arrives, nothing travels.
+   ────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  [data-reveal],
+  [data-reveal-image] > *,
+  [data-tilt-inner],
+  [data-tilt-lift],
+  .hero-plane,
+  .story-panel {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+/* Print: the enquiry form and floating CTAs are noise on paper. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Admin panel
+   Shares the palette so the two do not feel like different products,
+   but the controls are utilitarian: visible borders, filled inputs,
+   nothing that animates. A CMS should be legible, not cinematic.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  .adm-input,
+  .adm-textarea,
+  .adm-select {
+    width: 100%;
+    background: #fff;
+    border: 1px solid rgb(10 10 11 / 0.16);
+    padding: 0.5625rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    border-radius: 2px;
+  }
+  .adm-input:focus,
+  .adm-textarea:focus,
+  .adm-select:focus {
+    outline: none;
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 3px rgb(176 141 87 / 0.15);
+  }
+  .adm-textarea {
+    resize: vertical;
+    line-height: 1.6;
+    font-family: inherit;
+  }
+  .adm-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin-bottom: 0.3125rem;
+  }
+  .adm-help {
+    margin-top: 0.3125rem;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    color: var(--color-stone);
+  }
+  .adm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4375rem;
+    min-height: 2.375rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.78125rem;
+    font-weight: 500;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease;
+  }
+  .adm-btn-primary {
+    background: var(--color-ink);
+    color: var(--color-ivory);
+  }
+  .adm-btn-primary:hover {
+    background: var(--color-charcoal-light);
+  }
+  .adm-btn-secondary {
+    background: #fff;
+    border-color: rgb(10 10 11 / 0.18);
+    color: var(--color-ink);
+  }
+  .adm-btn-secondary:hover {
+    border-color: rgb(10 10 11 / 0.4);
+  }
+  .adm-btn-danger {
+    background: #fff;
+    border-color: rgb(190 60 60 / 0.35);
+    color: #a33;
+  }
+  .adm-btn-danger:hover {
+    background: rgb(190 60 60 / 0.06);
+  }
+  .adm-btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .adm-card {
+    background: #fff;
+    border: 1px solid rgb(10 10 11 / 0.1);
+    border-radius: 3px;
+  }
+  .adm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    padding: 0.1875rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+}

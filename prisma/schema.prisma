@@ -1,0 +1,257 @@
+// Patil Studio — its own database, its own migration history.
+//
+// This is a SEPARATE database (`patilstudio`) living inside the same Postgres 17
+// container GalleryFlow uses. Nothing here references a GalleryFlow table and
+// nothing there references these; the only shared thing is the engine process.
+// See infrastructure/postgres/001-create-database.sql for provisioning.
+//
+// Model conventions mirror GalleryFlow so the two feel the same to work in:
+// uuid(7) ids, createdAt/updatedAt, integer minor units for money.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A contact / booking enquiry submitted from the public site.
+///
+/// STARTING POINT, not a finished model — this is the one thing a studio site
+/// demonstrably needs a database for, so the schema is not empty and the wiring
+/// (route handler -> Prisma -> its own DB) is proven end to end. Add or replace
+/// models as the real site takes shape.
+model Inquiry {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  name          String
+  email         String
+  phone         String?
+  /// Free text as typed ("Nov 2026", "next Diwali") — deliberately not a date,
+  /// because forcing a date picker on someone still deciding loses the enquiry.
+  eventDate     String?
+  eventType     String?
+  /// Venue or city, as typed.
+  eventLocation String?
+  /// "1", "3 events", "Haldi + wedding + reception" — free text, same reasoning as eventDate.
+  eventCount    String?
+  /// A band picked from a dropdown, never a number. Asking for a figure loses enquiries.
+  budget        String?
+  /// Ticked service checkboxes, e.g. ["Candid Photography", "Cinematic Film"].
+  services      String[]
+  message       String
+  /// Which page or campaign the enquiry came from.
+  source        String?
+  status        InquiryStatus @default(NEW)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  REPLIED
+  ARCHIVED
+}
+
+// ──────────────────────────────────────────────────────────────────────
+//  CMS
+//
+//  Every editable thing on the public site lives below. The site does NOT
+//  require these tables to be populated: lib/content/defaults.ts supplies a
+//  complete fallback for each collection, and lib/content/index.ts swallows
+//  a database error and serves the defaults instead. That is deliberate —
+//  a Postgres blip should cost the studio its enquiry form, not its whole
+//  website (same reasoning as the health check not touching the database).
+//
+//  Common shape: `sortOrder` for display order, `published` to hide a row
+//  without deleting it, and `imagePath` nullable because an empty
+//  photograph slot is a real state that renders a marked placeholder.
+// ──────────────────────────────────────────────────────────────────────
+
+/// Flat key/value settings — see lib/content/settings.ts for the key namespace
+/// and the defaults. A key absent here simply falls back to its default.
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Service {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  slug       String   @unique
+  title      String
+  blurb      String
+  detail     String
+  inclusions String[]
+  imagePath  String?
+  imageAlt   String?
+  /// Art direction shown inside the placeholder while imagePath is empty.
+  imageBrief String?
+  imageRatio String   @default("landscape")
+  sortOrder  Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+model PortfolioImage {
+  id         String            @id @default(uuid(7)) @db.Uuid
+  category   PortfolioCategory
+  imagePath  String?
+  imageAlt   String?
+  imageBrief String?
+  imageRatio String            @default("portrait")
+  /// Optional caption shown in the lightbox.
+  story      String?
+  /// Included in the home-page edit. Everything published shows on /portfolio.
+  featured   Boolean           @default(false)
+  sortOrder  Int               @default(0)
+  published  Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([published, category, sortOrder])
+  @@index([published, featured, sortOrder])
+}
+
+enum PortfolioCategory {
+  WEDDING
+  PRE_WEDDING
+  ENGAGEMENT
+  MATERNITY
+  BABY
+  EVENTS
+  FILMS
+}
+
+model Package {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  slug         String   @unique
+  name         String
+  /// Free text, not an integer amount. The studio quotes per wedding, and a
+  /// column typed as money invites a made-up number into the page.
+  priceLabel   String
+  tagline      String
+  badge        String?
+  features     String[]
+  ctaLabel     String   @default("Enquire Now")
+  /// While true the page says the figure is a placeholder, not a quote.
+  pricePending Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  published    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+/// One row of the Essential/Signature/Luxury comparison table.
+model ComparisonRow {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  feature   String
+  essential String   @default("—")
+  signature String   @default("—")
+  luxury    String   @default("—")
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+model Testimonial {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  quote         String
+  clientName    String
+  eventLabel    String
+  rating        Int      @default(5)
+  /// Rendered with a visible "placeholder" marker, so seed copy is never
+  /// mistaken for a real couple's words. Clear it only for real, permissioned
+  /// testimonials.
+  isPlaceholder Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  published     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+/// A chapter of the horizontal wedding-story section.
+model StoryChapter {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  number     String
+  title      String
+  body       String
+  imagePath  String?
+  imageAlt   String?
+  imageBrief String?
+  imageRatio String   @default("portrait")
+  sortOrder  Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+model Film {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  title      String
+  subtitle   String        @default("")
+  provider   VideoProvider @default(YOUTUBE)
+  /// A YouTube/Vimeo id (or full watch URL — parsed on read), or an MP4 URL.
+  /// Empty means "no film yet": the section shows a poster and no player.
+  videoRef   String        @default("")
+  imagePath  String?
+  imageAlt   String?
+  imageBrief String?
+  sortOrder  Int           @default(0)
+  published  Boolean       @default(true)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+enum VideoProvider {
+  YOUTUBE
+  VIMEO
+  MP4
+}
+
+model FaqItem {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+/// An admin-managed Instagram tile. Nothing is scraped: the studio uploads or
+/// selects its own image and optionally links the post it came from.
+model InstagramItem {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  imagePath  String?
+  imageAlt   String?
+  imageBrief String?
+  permalink  String?
+  sortOrder  Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}

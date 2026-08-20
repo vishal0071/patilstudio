@@ -1,0 +1,18 @@
+# Without this, `COPY . .` in the builder stage overwrites the container's
+# Linux node_modules with the host's (macOS binaries, wrong Prisma engine), and
+# pnpm's dependency-status check aborts the build with a stack trace that says
+# nothing about the cause. Not optional.
+node_modules
+.next
+.git
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+README.md
+
+# Local photographs are data, not build input. Without this a developer's uploads
+# directory is baked into the image and then shadowed by the volume at runtime —
+# wasted layers, and confusing the first time you go looking for a file.
+uploads
