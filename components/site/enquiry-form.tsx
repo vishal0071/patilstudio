@@ -57,7 +57,26 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
    */
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get('package');
-    if (value) setPreselectedPackage(value);
+    if (!value) return;
+    setPreselectedPackage(value);
+
+    /**
+     * Bring the form into view ourselves.
+     *
+     * The package buttons link to `/?package=signature#contact`. That changes the query,
+     * so it is a navigation to a different URL rather than an in-page jump — Next scrolls
+     * to the top, and by the time it looks for `#contact` this dynamically-rendered
+     * section has not streamed in yet, so the hash resolves to nothing. The result was a
+     * button that visibly did nothing.
+     *
+     * Doing it here works because this effect cannot run before the section it lives in
+     * exists. `requestAnimationFrame` waits for the paint that follows, so the scroll
+     * measures a settled layout.
+     */
+    const frame = requestAnimationFrame(() => {
+      document.getElementById('contact')?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   /** Re-checks one field, but only reports it once that field has been left. */

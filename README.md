@@ -438,6 +438,11 @@ The shape of it, so you know what you are in for:
   `forClient()`; the symptom otherwise is a 500 on every collection page.
 - **The CSP now names YouTube and Vimeo in `frame-src`** because the film modal frames
   them. Self-hosted MP4 needs no exception. Still baked at build time.
+- **A package CTA cannot rely on the URL hash to scroll.** `/?package=signature#contact`
+  changes the query, so it is a navigation to a different URL rather than an in-page jump:
+  Next scrolls to the top, and by the time it looks for `#contact` this dynamically-rendered
+  section has not streamed in yet. The enquiry form scrolls itself into view from its own
+  mount effect instead, which by definition cannot run before the section exists.
 - **`scrollX` cannot detect the horizontal-pan bug. Use `visualViewport.offsetLeft`.**
   When the LAYOUT viewport is wider than the screen, a finger drags the *visual* viewport
   within it; the document never scrolls, so `scrollX` stays 0 the entire time. Two separate
@@ -606,6 +611,11 @@ down — nothing in the GalleryFlow stack was touched:
   `image/png` → 415; a real PNG → 201. Saving `</script><script>alert(1)</script>` into
   `seo.description` renders as `\u003c/script` with no raw injection anywhere in the page.
   `robots.txt` on a fresh database is `Disallow: /`.
+- Every path to the enquiry form, clicked with real mouse events at 1440px and 390px: the
+  navigation CTA (desktop; on mobile it lives in the hamburger sheet, which also closes on
+  tap), the hero CTA, the sticky mobile Enquire bar, and each package button — all land with
+  `#contact` in view. A package button also carries its slug through to the form's hidden
+  field and its "Enquiring about" banner.
 - The layout viewport equals the visual viewport (390) on `/`, `/portfolio` and a service
   page, and six hard touch drags in both directions leave `visualViewport.offsetLeft` at 0.
   Found by bisecting the home page section by section (only Testimonials moved the number),
