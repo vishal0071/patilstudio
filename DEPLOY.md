@@ -110,9 +110,20 @@ committing would publish the database password. Generate the password and keep i
 the shell for the next two steps:
 
 ```bash
-PATIL_DB_PASSWORD="$(openssl rand -base64 24)"
-echo "$PATIL_DB_PASSWORD"      # copy it — step 4 needs the same value
+PATIL_DB_PASSWORD="$(openssl rand -hex 32)"
+echo "$PATIL_DB_PASSWORD"      # copy it — step 4 needs this EXACT value
 ```
+
+**`-hex`, not `-base64`.** This password goes into a URL, and base64's alphabet
+includes `/`, which terminates the authority component and makes the connection string
+unparseable, plus `+` and `=` which invite percent-decoding confusion. Hex is
+`0-9a-f`, so it needs no encoding and cannot be mangled in transit. 32 bytes of hex is
+128 bits of entropy — more than the base64 it replaces.
+
+Keep this shell open through step 4. If you close it the variable is gone, and
+generating a *second* password for `.env` is the one mistake that produces
+`P1000: Authentication failed` — the role has the first password, `.env` has the
+second, and nothing about the error says so.
 
 Apply the script **from the GalleryFlow directory**, because that is where the
 `postgres` service is defined:
@@ -197,8 +208,9 @@ Four values must be right before the first start:
 | `ADMIN_PASSWORD`       | the first `openssl` output — the owner's sign-in at `/admin` |
 | `ADMIN_SESSION_SECRET` | the second — lets the password rotate independently         |
 
-URL-encode the database password if it contains `@ : / ? #` or `%`. A raw `@`
-truncates the host and the error points somewhere unhelpful.
+The hex password from step 2 needs no URL-encoding — that is why it is hex. If you
+ever substitute one containing `@ : / ? #` or `%`, it must be percent-encoded, and a
+raw `@` truncates the host with an error that points somewhere unhelpful.
 
 **With `ADMIN_PASSWORD` unset the panel refuses every sign-in** rather than falling
 open, so a forgotten value is a locked panel, not an exposed one. That is the safe
@@ -399,6 +411,7 @@ runtime, so `docker compose up -d` is enough.
 | Enquiry form 429s for everyone         | `TRUSTED_PROXY_HOPS` too low for the proxy chain          | 1 for Traefik alone, 2 behind Cloudflare; then `up -d`                                          |
 | Photographs vanished after a deploy    | `docker compose down -v` destroyed `patil_uploads`        | Restore the uploads tarball from step 7. This is why that backup exists                        |
 | `open /opt/patilstudio/docker-compose.prod.yml: no such file` | GalleryFlow's `-f` flags used in this project | Drop both `-f` flags here; or you meant to run it from `/opt/galleryflow` and skipped the `cd` |
+| `P1000: Authentication failed … for `patilstudio`` | `.env`'s password ≠ the role's password | Reset both to one known hex value — see **Resetting the database password** below |
 
 ---
 
@@ -431,3 +444,46 @@ To remove the site entirely, including its data, the `DROP` statements are at th
 bottom of `infrastructure/postgres/001-create-database.sql`, and the volume goes with
 `docker volume rm patil_uploads`. Note the last SQL statement restores Postgres's
 default `CONNECT` grant on the GalleryFlow database.
+
+---
+
+## Resetting the database password
+
+Safe to do at any time — nothing but this site uses the role. Run it when
+`.env` and the role have drifted apart (`P1000`), or to rotate.
+
+```bash
+# on the server
+NEW_PW="$(openssl rand -hex 32)"; echo "$NEW_PW"
+
+cd /opt/galleryflow
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres \
+  psql -U galleryflow -d postgres -v pw="$NEW_PW" <<'SQL'
+ALTER ROLE patilstudio WITH PASSWORD :'pw';
+SQL
+```
+
+Expect `ALTER ROLE`. Then prove the credential works *before* touching `.env`, so you
+are testing one thing at a time:
+
+```bash
+cd /opt/galleryflow
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T \
+  -e PGPASSWORD="$NEW_PW" postgres psql -U patilstudio -d patilstudio -tAc 'select 1'
+```
+
+`1` means the role and password agree. Now put that exact value into `.env`:
+
+```bash
+cd /opt/patilstudio
+nano .env      # DATABASE_URL=postgresql://patilstudio:<NEW_PW>@postgres:5432/patilstudio?schema=public
+docker compose up -d          # no --build needed; DATABASE_URL is read at runtime
+docker compose logs -f site
+```
+
+The migrations should apply and the server start. If it still fails, compare the two
+directly — the password is on screen either way, on your own server:
+
+```bash
+docker compose exec site printenv DATABASE_URL
+```

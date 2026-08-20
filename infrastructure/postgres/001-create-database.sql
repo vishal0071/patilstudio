@@ -14,7 +14,10 @@
 --  public, and a tracked file is exactly the wrong place for a live credential —
 --  editing it locally and committing would publish the database password. So:
 --
---    PATIL_DB_PASSWORD="$(openssl rand -base64 24)"; echo "$PATIL_DB_PASSWORD"
+--    PATIL_DB_PASSWORD="$(openssl rand -hex 32)"; echo "$PATIL_DB_PASSWORD"
+--
+--  Hex, not base64: this value also goes into DATABASE_URL, and base64's `/` makes
+--  that URL unparseable.
 --
 --  then invoke with -v (see below) and put the identical value in patilstudio/.env's
 --  DATABASE_URL. If the variable is unset psql fails with a syntax error rather than
