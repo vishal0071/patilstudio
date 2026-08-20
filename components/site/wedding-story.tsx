@@ -51,7 +51,7 @@ export function WeddingStory({
         </header>
       </div>
 
-      <ol className="no-scrollbar mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-4 pl-[var(--edge)] sm:gap-8">
+      <ol data-track-x="" className="no-scrollbar mt-14 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-4 pl-[var(--edge)] sm:gap-8">
         {chapters.map((chapter, i) => (
           <li
             key={chapter.id}

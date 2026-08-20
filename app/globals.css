@@ -362,6 +362,21 @@ body {
     transform: scale(1);
   }
 
+  /* Every direct child of a horizontal snap track is made a containing block.
+     Tailwind's `.sr-only` is `position: absolute`, and without a positioned ancestor its
+     containing block is the initial containing block — so, placed at its static position
+     inside a card far along the track, it escaped the track's clipping and extended the
+     document's scrollable width. Mobile browsers answer that by widening the LAYOUT
+     viewport; `position: fixed` elements resolve against the widened value, so the header
+     and the bottom CTA bar stretched past a 390px screen and the page could be dragged
+     sideways into blank space. `scrollX` stays 0 throughout — only
+     `visualViewport.offsetLeft` shows it.
+     Marking the track rather than fixing one card means a future track is safe by
+     default. */
+  [data-track-x] > * {
+    position: relative;
+  }
+
   .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;

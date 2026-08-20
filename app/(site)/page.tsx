@@ -67,7 +67,7 @@ export default async function HomePage() {
       />
       <InstagramSection items={instagram} settings={settings} />
       <Faq faqs={faqs} settings={settings} />
-      <ContactSection settings={settings} />
+      {/*<ContactSection settings={settings} />*/}
     </>
   );
 }

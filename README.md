@@ -438,6 +438,24 @@ The shape of it, so you know what you are in for:
   `forClient()`; the symptom otherwise is a 500 on every collection page.
 - **The CSP now names YouTube and Vimeo in `frame-src`** because the film modal frames
   them. Self-hosted MP4 needs no exception. Still baked at build time.
+- **`scrollX` cannot detect the horizontal-pan bug. Use `visualViewport.offsetLeft`.**
+  When the LAYOUT viewport is wider than the screen, a finger drags the *visual* viewport
+  within it; the document never scrolls, so `scrollX` stays 0 the entire time. Two separate
+  "verified, no horizontal pan" claims in this file were wrong because of exactly this, and
+  the bug was reported from a real phone three times before the right instrument was used.
+  The check is: `innerWidth === visualViewport.width`, then drag and assert
+  `visualViewport.offsetLeft === 0`.
+- **An absolutely-positioned descendant inside a horizontal scroller will escape it.** Its
+  containing block is the nearest *positioned* ancestor — and with none, the initial
+  containing block, which no scroll container clips. Tailwind's `.sr-only` is
+  `position: absolute`, so a single `<span className="sr-only">5 out of 5</span>` in a
+  testimonial card, sitting hundreds of pixels along the track, extended the document to
+  772px. Mobile browsers widen the layout viewport to match, `position: fixed` elements
+  resolve against the widened value, and so the header and the bottom CTA bar stretched to
+  772px on a 390px screen: the page dragged sideways into blank white space. Every box on
+  the page still measured 390. `[data-track-x] > * { position: relative }` in globals.css
+  anchors every track child so a future track is safe by default — put `data-track-x` on
+  any new horizontal scroller.
 - **Horizontal panning is blocked on `html`, not just `body`, and with `clip` not
   `hidden`.** `overflow-x` on `body` alone propagates to the viewport per spec, but iOS
   Safari does not honour it reliably — the whole page could be dragged sideways on a real
@@ -588,6 +606,11 @@ down — nothing in the GalleryFlow stack was touched:
   `image/png` → 415; a real PNG → 201. Saving `</script><script>alert(1)</script>` into
   `seo.description` renders as `\u003c/script` with no raw injection anywhere in the page.
   `robots.txt` on a fresh database is `Disallow: /`.
+- The layout viewport equals the visual viewport (390) on `/`, `/portfolio` and a service
+  page, and six hard touch drags in both directions leave `visualViewport.offsetLeft` at 0.
+  Found by bisecting the home page section by section (only Testimonials moved the number),
+  then the card contents piece by piece, down to the one `sr-only` span. The carousel still
+  scrolls its full 1074px in a 390px track.
 - After clipping at the root: `html` computes `overflow-x: clip` with `overflow-y: visible`,
   both tracks compute `overscroll-behavior-x: contain`, and vertical scrolling still works
   (`scrollTo(0,3000)` lands at 3000; three touch flicks reach 1809). Raw touch drags — 
