@@ -438,6 +438,19 @@ The shape of it, so you know what you are in for:
   `forClient()`; the symptom otherwise is a 500 on every collection page.
 - **The CSP now names YouTube and Vimeo in `frame-src`** because the film modal frames
   them. Self-hosted MP4 needs no exception. Still baked at build time.
+- **Horizontal panning is blocked on `html`, not just `body`, and with `clip` not
+  `hidden`.** `overflow-x` on `body` alone propagates to the viewport per spec, but iOS
+  Safari does not honour it reliably — the whole page could be dragged sideways on a real
+  iPhone, which no amount of headless Chrome testing had surfaced. `clip` creates no scroll
+  container, so nothing is left to pan even programmatically, and — unlike `hidden` — it
+  leaves an unspecified `overflow-y` as `visible` instead of coercing it to `auto` and
+  handing vertical scrolling to the root element. `hidden` is declared first as the fallback
+  for Safari 15 and older. **Verify vertical scrolling after touching these rules**; it is
+  the thing this change can break.
+- **The horizontal snap tracks need `overscroll-x-contain`.** Swiping the wedding story or
+  the testimonials to their end otherwise *chains* the scroll to the page and drags the
+  whole site sideways — the same reported symptom, from a completely different cause. Any
+  new horizontal scroller needs the same class.
 - **Neither `documentElement.scrollWidth` nor `scrollTo()` will tell you whether this page
   has a horizontal-overflow bug.** `body { overflow-x: hidden }` propagates to the
   *viewport* per spec, leaving the body element itself `visible`, so the root reports a
@@ -575,6 +588,14 @@ down — nothing in the GalleryFlow stack was touched:
   `image/png` → 415; a real PNG → 201. Saving `</script><script>alert(1)</script>` into
   `seo.description` renders as `\u003c/script` with no raw injection anywhere in the page.
   `robots.txt` on a fresh database is `Disallow: /`.
+- After clipping at the root: `html` computes `overflow-x: clip` with `overflow-y: visible`,
+  both tracks compute `overscroll-behavior-x: contain`, and vertical scrolling still works
+  (`scrollTo(0,3000)` lands at 3000; three touch flicks reach 1809). Raw touch drags — 
+  `touchStart`/`touchMove`×12/`touchEnd`, not `synthesizeScrollGesture`, which rejects a
+  gesture whose end point leaves the viewport — dragged past the end of each track and
+  across plain content leave `scrollX` at 0, while the tracks still scroll their full
+  travel (1555px and 748px). Note the caveat: this emulation reports an 801px layout
+  viewport, so it is not a faithful iPhone, and the original report came from a real device.
 - The editor's JavaScript genuinely does not reach visitors: it is a separate chunk
   (`chunks/37.*.js`), and a network trace shows an anonymous page load fetching 10 chunks
   without it while an admin fetches 11 with it. An earlier claim of this was wrong — a

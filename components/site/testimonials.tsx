@@ -92,7 +92,7 @@ export function Testimonials({
         <ul
           ref={trackRef}
           onScroll={onScroll}
-          className="no-scrollbar mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2"
+          className="no-scrollbar mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain pb-2"
         >
           {testimonials.map((item) => (
             <li

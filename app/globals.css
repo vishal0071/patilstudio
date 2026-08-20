@@ -40,6 +40,22 @@ html {
   /* Sticky nav is ~5rem; anchor targets must clear it. */
   scroll-padding-top: 5rem;
   -webkit-tap-highlight-color: transparent;
+
+  /* Horizontal panning is blocked HERE, on the root, not only on body.
+     `overflow-x` on `body` alone propagates to the viewport per spec, but iOS Safari
+     does not honour it reliably and the page could still be dragged sideways — reported
+     from a real device, and not reproducible in headless Chrome.
+     `clip` rather than `hidden` for two reasons: it creates no scroll container, so
+     there is nothing left to pan even programmatically; and paired with an unspecified
+     `overflow-y` it leaves that axis `visible`, whereas `hidden` would coerce it to
+     `auto` and hand vertical scrolling to the root element. `hidden` is declared first
+     as the fallback for Safari 15 and older. */
+  overflow-x: hidden;
+  overflow-x: clip;
+
+  /* Stops a horizontal fling that starts inside one of the snap tracks from escaping
+     into the browser's own back/forward swipe. */
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -47,8 +63,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-weight: 350;
-  /* No section may push the viewport sideways — checked on 320px. */
+  /* Belt and braces with the root rule above; see the note there for why `clip`. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 ::selection {
