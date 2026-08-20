@@ -83,24 +83,34 @@ with a separate deploy.
 Once, and only once. This creates a `patilstudio` database and a non-superuser role
 inside GalleryFlow's existing Postgres container.
 
+**The password is passed in, never written into the SQL file.** This repository is
+public, so a tracked file is the wrong place for a live credential — editing it and
+committing would publish the database password. Generate the password and keep it in
+the shell for the next two steps:
+
 ```bash
-cd /opt/patilstudio
-openssl rand -base64 24          # copy the output
-nano infrastructure/postgres/001-create-database.sql   # replace REPLACE_ME with it
+PATIL_DB_PASSWORD="$(openssl rand -base64 24)"
+echo "$PATIL_DB_PASSWORD"      # copy it — step 4 needs the same value
 ```
 
-Apply it **from the GalleryFlow directory**, because that is where the `postgres`
-service is defined:
+Apply the script **from the GalleryFlow directory**, because that is where the
+`postgres` service is defined:
 
 ```bash
 cd /opt/galleryflow
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres \
-  psql -U galleryflow -d postgres < /opt/patilstudio/infrastructure/postgres/001-create-database.sql
+  psql -U galleryflow -d postgres -v patil_password="$PATIL_DB_PASSWORD" \
+  < /opt/patilstudio/infrastructure/postgres/001-create-database.sql
 ```
 
-Expect exactly: `CREATE ROLE`, `CREATE DATABASE`, `REVOKE`, `GRANT`, `REVOKE`, `GRANT`.
+Expect exactly six lines: `CREATE ROLE`, `CREATE DATABASE`, `REVOKE`, `GRANT`,
+`REVOKE`, `GRANT`.
 
-**Verify — all four, before moving on.** The third must fail; that is the point.
+If you forget the `-v`, psql fails with `syntax error at or near ":"` and creates
+nothing — a safe failure, not a role with a broken password. Re-run it with the
+variable.
+
+**Verify — all three, before moving on.** The third must fail; that is the point.
 
 ```bash
 cd /opt/galleryflow
@@ -113,13 +123,11 @@ $C psql -U patilstudio -d galleryflow -tAc 'select 1'                    # must 
 
 The third is expected to print
 `FATAL: permission denied for database "galleryflow"`. If it returns `1` instead, the
-revoke did not apply and the site's role can read GalleryFlow's catalog — fix that
+revoke did not apply and this site's role can read GalleryFlow's catalog — fix that
 before continuing.
 
-The first one succeeding is what proves the revoke did not lock GalleryFlow out of its
-own database.
-
----
+The first succeeding is what proves the revoke did not lock GalleryFlow out of its own
+database.
 
 ## 3. DNS — before you start the container
 
@@ -164,7 +172,7 @@ Four values must be right before the first start:
 | Variable               | Value                                                       |
 | ---------------------- | ----------------------------------------------------------- |
 | `SITE_DOMAIN`          | `patilstudio.in`                                            |
-| `DATABASE_URL`         | the **same password** you put in the SQL in step 2          |
+| `DATABASE_URL`         | the **same** `$PATIL_DB_PASSWORD` from step 2               |
 | `ADMIN_PASSWORD`       | the first `openssl` output — the owner's sign-in at `/admin` |
 | `ADMIN_SESSION_SECRET` | the second — lets the password rotate independently         |
 
@@ -188,6 +196,9 @@ per enquiry. Unset, each enquiry is still written to Postgres and readable at
 grep -c REPLACE_ME .env      # must print 0
 grep -E '^(ADMIN_PASSWORD|SITE_DOMAIN)=' .env | grep -v '=$'   # both must appear
 ```
+
+`.env` is gitignored and stays on the server. Nothing in this repository should ever
+contain a real credential — it is public.
 
 ## 5. Build and start
 

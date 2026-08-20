@@ -6,13 +6,19 @@
 --
 --  How to run it (from the GalleryFlow repo root, stack up):
 --
---    docker compose exec -T postgres \
---      psql -U galleryflow -d postgres < \
---      ../patilstudio/infrastructure/postgres/001-create-database.sql
+--    docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres \
+--      psql -U galleryflow -d postgres -v patil_password="$PATIL_DB_PASSWORD" \
+--      < /opt/patilstudio/infrastructure/postgres/001-create-database.sql
 --
---  Set the password FIRST — replace REPLACE_ME below with the output of
---    openssl rand -base64 24
---  and use the identical value in patilstudio/.env's DATABASE_URL.
+--  The password is passed IN, never written into this file. This repository is
+--  public, and a tracked file is exactly the wrong place for a live credential —
+--  editing it locally and committing would publish the database password. So:
+--
+--    PATIL_DB_PASSWORD="$(openssl rand -base64 24)"; echo "$PATIL_DB_PASSWORD"
+--
+--  then invoke with -v (see below) and put the identical value in patilstudio/.env's
+--  DATABASE_URL. If the variable is unset psql fails with a syntax error rather than
+--  creating a role with a literal or empty password.
 --
 --  NOTE: `CREATE DATABASE` cannot run inside a transaction block, which is why
 --  this file has no BEGIN/COMMIT. psql runs each statement autocommit.
@@ -21,7 +27,7 @@
 -- ── 1. The role ────────────────────────────────────────────────────────────
 -- No SUPERUSER, no CREATEDB, no CREATEROLE. It owns exactly one database and
 -- can do nothing else on this server.
-CREATE ROLE patilstudio WITH LOGIN PASSWORD 'REPLACE_ME' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+CREATE ROLE patilstudio WITH LOGIN PASSWORD :'patil_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
 
 -- ── 2. The database ────────────────────────────────────────────────────────
 -- Owned by that role, so Prisma migrations can create/alter its own tables. On
