@@ -40,6 +40,13 @@ services:
       # than falling open, so /admin is simply unusable until this is set.
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
+      # How many proxies append a hop to X-Forwarded-For. 1 = Traefik only, which is
+      # this deployment. Named here because a var absent from this block never reaches
+      # the container, so a .env override would silently do nothing — and the failure
+      # is invisible: with a CDN in front and this left at 1, every visitor buckets as
+      # the CDN's edge IP and the enquiry limiter throttles the whole site at once.
+      # Put Cloudflare in front of Traefik and this becomes 2. See lib/client-ip.ts.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       # Where uploaded photographs are written — must match the volume mount below.
       UPLOAD_DIR: /app/uploads
       IMAGE_CDN_HOSTS: ${IMAGE_CDN_HOSTS:-}
