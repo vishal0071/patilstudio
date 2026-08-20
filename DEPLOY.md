@@ -14,6 +14,27 @@ image across architectures.
 
 ---
 
+## Two compose projects, two invocation styles
+
+You will be moving between two directories, and they do **not** take the same
+command. Getting this wrong produces
+`open /opt/patilstudio/docker-compose.prod.yml: no such file or directory`.
+
+| In                 | Use                                                             | Why                                                            |
+| ------------------ | --------------------------------------------------------------- | -------------------------------------------------------------- |
+| `/opt/galleryflow` | `docker compose -f docker-compose.yml -f docker-compose.prod.yml …` | The SaaS layers a production overlay over its base file        |
+| `/opt/patilstudio` | `docker compose …` (no `-f` at all)                             | This project has **one** compose file, already written for production |
+
+There is no `docker-compose.prod.yml` here and there should not be: the single file
+already names the `websecure` entrypoint and the `le` certificate resolver. Adding the
+GalleryFlow flags here fails; omitting them there silently targets the development
+stack.
+
+Every command below is preceded by the `cd` it needs. If you paste a block, paste the
+whole block.
+
+---
+
 ## 0. Confirm you are on the right host, and that TLS is live
 
 ```bash
@@ -377,6 +398,7 @@ runtime, so `docker compose up -d` is enough.
 | Uploads fail, or `/media/<file>` 404s  | `UPLOAD_DIR` and the volume mount disagree                | Both must be `/app/uploads`: `docker compose exec site sh -c 'printenv UPLOAD_DIR; ls /app/uploads'` |
 | Enquiry form 429s for everyone         | `TRUSTED_PROXY_HOPS` too low for the proxy chain          | 1 for Traefik alone, 2 behind Cloudflare; then `up -d`                                          |
 | Photographs vanished after a deploy    | `docker compose down -v` destroyed `patil_uploads`        | Restore the uploads tarball from step 7. This is why that backup exists                        |
+| `open /opt/patilstudio/docker-compose.prod.yml: no such file` | GalleryFlow's `-f` flags used in this project | Drop both `-f` flags here; or you meant to run it from `/opt/galleryflow` and skipped the `cd` |
 
 ---
 
