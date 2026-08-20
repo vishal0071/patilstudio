@@ -4,6 +4,7 @@ import { whatsappHref } from '@/lib/site';
 import { RevealEngine } from '@/components/ui/reveal-engine';
 import { TiltEngine } from '@/components/ui/tilt-engine';
 import { SiteNav } from '@/components/site/site-nav';
+import { brandLogoFrom } from '@/components/site/brand-mark';
 import { SiteFooter } from '@/components/site/site-footer';
 import { FloatingCta } from '@/components/site/floating-cta';
 import { LiveEditorMount } from '@/components/site/live-editor-mount';
@@ -46,6 +47,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
       <SiteNav
         brandName={settings['brand.name']}
+        logo={brandLogoFrom(settings)}
         whatsappUrl={whatsappHref(settings)}
         bookCta={settings['hero.primaryCta']}
       />

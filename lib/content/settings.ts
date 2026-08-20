@@ -18,6 +18,14 @@ export const settingDefaults = {
   'brand.tagline': 'Capturing emotions. Creating memories. Telling stories.',
   'brand.photographerName': 'Ganesh Patil',
   'brand.photographerRole': 'Founder & Lead Photographer',
+  // Logo. Empty falls back to the typeset wordmark ("GANESH / PHOTOGRAPHY"), which is
+  // why the site looks finished before a logo exists. Upload a version that reads on a
+  // DARK ground: the navigation sits over photographs and the footer is near-black.
+  'brand.logoPath': '',
+  'brand.logoAlt': 'Ganesh Patil Photography',
+  // Rendered height in pixels; width follows the file's own proportions. 36 suits a
+  // horizontal wordmark, 44–52 a stacked or emblem mark.
+  'brand.logoHeight': '36',
   'brand.city': 'Pune',
   'brand.region': 'Maharashtra',
   'brand.country': 'India',

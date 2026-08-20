@@ -181,6 +181,28 @@ Two implementation traps, both hit while building this:
   which is why depth is applied to the card plane and to the caption — never inside the
   frame.
 
+## The logo
+
+`brand.logoPath` in **Text & settings** — upload there, or
+`pnpm import:photos ~/logo.png --into logo`. Empty falls back to the typeset wordmark
+("GANESH" in Cormorant over "PHOTOGRAPHY" letterspaced in gold), which is a finished piece
+of design rather than a placeholder, so the header looks right before a logo exists.
+Deleting the setting brings it back.
+
+- **Upload a version that reads on a DARK ground.** The navigation sits over photographs
+  and the footer is near-black.
+- **Height is fixed, width follows the file.** `brand.logoHeight` (px, default 36, clamped
+  16–96) sets the height; any proportion works undistorted — verified with a 6.25:1
+  wordmark and a 1:1 emblem. `max-w-[11rem]` below `sm` stops an unusually wide file
+  crowding the WhatsApp and menu buttons at 390px.
+- **Rendered `unoptimized`.** A logo is flat art at a small size, which is exactly where
+  the optimiser's lossy pass turns a crisp wordmark muddy, and the file is a few KB anyway.
+
+Image-valued settings (`*.logoPath`, `*.imagePath`, `seo.ogImagePath`) get the upload
+widget in the admin form, matched by suffix so a new one picks it up automatically. They
+were plain text inputs before, which meant the panel asked for a path the studio had no way
+to produce — the live editor and the import CLI were the only routes in.
+
 ## Importing photographs
 
 The admin panel uploads one frame at a time, which is right for swapping a hero and wrong

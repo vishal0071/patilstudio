@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Service, Settings } from '@/lib/content';
 import { NAV_LINKS, mailHref, telHref, whatsappHref } from '@/lib/site';
 import { editableSetting } from '@/lib/edit';
+import { BrandMark, brandLogoFrom } from './brand-mark';
 import {
   FacebookIcon,
   InstagramIcon,
@@ -41,9 +42,13 @@ export function SiteFooter({
       <div className="shell">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))] lg:gap-12">
           <div>
-            <p className="font-serif text-2xl leading-tight font-light">
-              {settings['brand.name']}
-            </p>
+            {brandLogoFrom(settings) ? (
+              <BrandMark logo={brandLogoFrom(settings)} brandName={settings['brand.name']} />
+            ) : (
+              <p className="font-serif text-2xl leading-tight font-light">
+                {settings['brand.name']}
+              </p>
+            )}
             <p
               className="mt-4 max-w-[34ch] font-serif text-base leading-relaxed text-gold-soft/85"
               {...editableSetting('brand.tagline', { multiline: true })}

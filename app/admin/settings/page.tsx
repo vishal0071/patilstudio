@@ -8,6 +8,8 @@ import {
   type SettingKey,
 } from '@/lib/content/settings';
 import { ActionForm, SubmitButton } from '@/components/admin/action-form';
+import { ImageField } from '@/components/admin/image-field';
+import { isImageSetting } from '@/lib/edit';
 import { saveSettings } from '../actions';
 
 /**
@@ -103,6 +105,21 @@ function SettingControl({
   const label = humanise(settingKey);
   const isBoolean = value === 'true' || value === 'false';
   const isMultiline = MULTILINE_SETTING_KEYS.has(settingKey);
+
+  // Image-valued keys get the upload widget. Before this they were plain text inputs, so
+  // the only ways to set a hero, logo or OG image were the live editor and the import CLI
+  // — and someone looking for it in the panel found a box wanting a path they had no way
+  // to produce.
+  if (isImageSetting(settingKey)) {
+    return (
+      <ImageField
+        name={settingKey}
+        label={label}
+        defaultValue={value}
+        help={isDefault ? 'Not set — the site falls back to its built-in default.' : undefined}
+      />
+    );
+  }
 
   return (
     <div>

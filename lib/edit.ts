@@ -94,7 +94,13 @@ export function parseField(field: unknown): ParsedField | null {
   };
 }
 
-/** Setting keys whose value is an image path, so the editor offers a file picker. */
+/**
+ * Setting keys whose value is an image path, so the admin form offers an upload button
+ * and a thumbnail instead of a bare text input.
+ *
+ * Suffix-matched rather than listed, so a new `*.imagePath` or `*.logoPath` key gets the
+ * upload widget without anyone having to remember to add it here.
+ */
 export function isImageSetting(key: string): boolean {
-  return key.endsWith('.imagePath') || key === 'seo.ogImagePath';
+  return key.endsWith('.imagePath') || key.endsWith('.logoPath') || key === 'seo.ogImagePath';
 }

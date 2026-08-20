@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { NAV_LINKS } from '@/lib/site';
 import { CloseIcon, WhatsAppIcon } from '@/components/ui/icons';
+import { BrandMark, type BrandLogo } from './brand-mark';
 
 type Props = {
   brandName: string;
+  logo: BrandLogo | null;
   whatsappUrl: string;
   bookCta: string;
   /** Dark pages (the portfolio index, service pages) have no light hero to sit on. */
@@ -20,7 +22,7 @@ type Props = {
  * actual height on every screen — on a phone in landscape a `scrollY > 600` test
  * fires after the hero has already gone.
  */
-export function SiteNav({ brandName, whatsappUrl, bookCta, alwaysSolid = false }: Props) {
+export function SiteNav({ brandName, logo, whatsappUrl, bookCta, alwaysSolid = false }: Props) {
   const [solid, setSolid] = useState(alwaysSolid);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -59,15 +61,11 @@ export function SiteNav({ brandName, whatsappUrl, bookCta, alwaysSolid = false }
         <nav className="shell flex items-center justify-between gap-6" aria-label="Primary">
           <Link
             href="/#top"
-            className="font-serif text-ivory transition-opacity hover:opacity-70"
+            aria-label={brandName}
+            className="text-ivory transition-opacity hover:opacity-70"
             onClick={() => setMenuOpen(false)}
           >
-            <span className="block text-[0.95rem] leading-none tracking-[0.16em] uppercase sm:text-[1.05rem]">
-              {brandName.split(' ')[0]}
-            </span>
-            <span className="mt-1 block text-[0.5rem] leading-none tracking-[0.42em] text-gold uppercase">
-              Photography
-            </span>
+            <BrandMark logo={logo} brandName={brandName} />
           </Link>
 
           <ul className="hidden items-center gap-8 xl:flex">

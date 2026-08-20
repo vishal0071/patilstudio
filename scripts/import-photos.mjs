@@ -18,7 +18,7 @@
  * no reason to pre-shrink anything before it gets here.
  *
  * Options
- *   --into <target>   portfolio (default) | instagram | hero | about
+ *   --into <target>   portfolio (default) | instagram | hero | about | logo
  *   --category <CAT>  WEDDING PRE_WEDDING ENGAGEMENT MATERNITY BABY EVENTS FILMS
  *   --featured        mark portfolio rows as featured (the shorter home-page edit)
  *   --alt "<text>"    one alt text for every file, instead of deriving from filenames
@@ -39,7 +39,7 @@ import { classifyRatio, readImageSize } from './image-size.mjs';
 
 const ACCEPTED = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const CATEGORIES = ['WEDDING', 'PRE_WEDDING', 'ENGAGEMENT', 'MATERNITY', 'BABY', 'EVENTS', 'FILMS'];
-const TARGETS = ['portfolio', 'instagram', 'hero', 'about'];
+const TARGETS = ['portfolio', 'instagram', 'hero', 'about', 'logo'];
 
 const prisma = new PrismaClient({ log: ['error'] });
 
@@ -187,7 +187,7 @@ async function main() {
   const files = await collectFiles(opts.inputs);
   if (files.length === 0) fail('Found no .jpg, .png or .webp files to import.');
 
-  if ((opts.into === 'hero' || opts.into === 'about') && files.length > 1) {
+  if (['hero', 'about', 'logo'].includes(opts.into) && files.length > 1) {
     fail(`--into ${opts.into} takes a single photograph, but ${files.length} were found.`);
   }
 
@@ -222,7 +222,7 @@ async function main() {
     // refusing to point at a photograph because it is already uploaded is just wrong.
     // Reuse the stored copy instead of writing the bytes twice.
     const alreadyStored = seen.get(hash);
-    const settingTarget = opts.into === 'hero' || opts.into === 'about';
+    const settingTarget = ['hero', 'about', 'logo'].includes(opts.into);
     if (alreadyStored && !settingTarget) {
       console.log(`  – ${name}  already imported (${alreadyStored})`);
       skipped += 1;
@@ -248,7 +248,11 @@ async function main() {
     console.log(
       `  ✓ ${name}  ${size.width}×${size.height} (${megapixels}MP) → ${ratio}${
         alreadyStored ? '  (reusing the copy already uploaded)' : ''
-      }${size.width < 1600 ? '  ⚠ under 1600px wide — will look soft full-bleed' : ''}`,
+      }${
+        size.width < 1600 && opts.into !== 'logo'
+          ? '  ⚠ under 1600px wide — will look soft full-bleed'
+          : ''
+      }`,
     );
 
     if (opts.dryRun) {
@@ -283,6 +287,14 @@ async function main() {
           published: opts.published,
         },
       });
+    } else if (opts.into === 'logo') {
+      // The logo lives under brand.* rather than <target>.imagePath.
+      const entries = [['brand.logoPath', url], ...(alt ? [['brand.logoAlt', alt]] : [])];
+      for (const [key, value] of entries) {
+        await prisma.siteSetting.upsert({ where: { key }, create: { key, value }, update: { value } });
+      }
+      imported += 1;
+      continue;
     } else {
       // hero / about are settings, not collection rows.
       const entries = [
