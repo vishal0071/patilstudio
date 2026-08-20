@@ -236,6 +236,45 @@ would come from a cached feed instead of the table and
 [components/site/instagram-section.tsx](components/site/instagram-section.tsx) would not
 change.
 
+## Pre-deploy security review
+
+Reviewed before first deploy. Three real findings, all fixed; each is verified in
+"What has been verified".
+
+- **The rate limiters keyed on a spoofable value.** Both the enquiry limiter and the admin
+  password limiter read `X-Forwarded-For.split(',')[0]`. Traefik *appends* the peer address
+  to whatever the client sent, so the first entry is attacker-controlled — rotating one
+  header gave an unlimited budget, which for the login limiter defeated brute-force lockout
+  entirely. Now [lib/client-ip.ts](lib/client-ip.ts) counts back `TRUSTED_PROXY_HOPS`
+  (default 1) from the end, and a request arriving with fewer hops than expected collapses
+  to a single shared bucket rather than a fresh one per forged value.
+- **The upload allow-list keyed on the claimed `Content-Type`.** `File.type` is
+  caller-supplied, so any bytes could be stored as `.png`. Now the extension comes from the
+  file's actual magic bytes ([lib/image-sniff.ts](lib/image-sniff.ts)). Consequences were
+  bounded — the media route serves a fixed Content-Type with `nosniff`, so nothing could
+  ever be served as HTML or script — but the check was decorative.
+- **JSON-LD was `JSON.stringify` straight into a `<script>`.** Every string in that graph
+  comes from the admin panel, so a value containing `</script>` closed the element early:
+  an admin could XSS every visitor. `jsonLdScript()` escapes `<` and U+2028/U+2029.
+
+Accepted, with reasons:
+
+- **`script-src 'unsafe-inline'`** is required by Next's hydration bootstrap. No
+  user-supplied content is ever rendered as HTML — React escapes everything, and the one
+  `dangerouslySetInnerHTML` is the JSON-LD above — so the practical XSS surface is small.
+  Nonce-based CSP is the upgrade if that changes.
+- **The admin session cannot be revoked server-side.** No session store, so a stolen cookie
+  is valid until it expires; hence a 7-day lifetime and a signing key derived from the
+  password, so changing the password invalidates every session.
+- **`/api/admin/revalidate` accepts the admin password as a bearer token** so the import CLI
+  can use it. Over HTTPS, and the password is already in that machine's `.env`.
+- **This container publishes no ports** — Traefik on the shared Docker network is the only
+  route in. That is load-bearing for the IP logic above: publishing a port would let a
+  caller reach the app directly and forge the whole `X-Forwarded-For` chain.
+- **Responses vary by session** (an admin gets the editor toolbar). Traefik does not cache,
+  but do not put a caching CDN in front without varying on the cookie, or one admin request
+  could be cached and served to visitors.
+
 ## First deploy
 
 Run from the server, with the GalleryFlow stack already up.
@@ -502,6 +541,18 @@ down — nothing in the GalleryFlow stack was touched:
 - The toolbar is inside the viewport and its Edit button is the topmost element at its own
   centre (`elementFromPoint`) at both 1440px and 390px; at 390px it clears the sticky CTA
   bar (toolbar bottom edge 96px, bar top edge 57px).
+- The security fixes, each with a test that failed before it: a forged `X-Forwarded-For`
+  plus a real appended hop now exhausts after 5 writes and returns 429 (previously 201
+  forever), a different real client still gets its own budget, and an unproxied request
+  collapses to one shared bucket. A PHP payload and a bare `GIF89a` both claiming
+  `image/png` → 415; a real PNG → 201. Saving `</script><script>alert(1)</script>` into
+  `seo.description` renders as `\u003c/script` with no raw injection anywhere in the page.
+  `robots.txt` on a fresh database is `Disallow: /`.
+- The editor's JavaScript genuinely does not reach visitors: it is a separate chunk
+  (`chunks/37.*.js`), and a network trace shows an anonymous page load fetching 10 chunks
+  without it while an admin fetches 11 with it. An earlier claim of this was wrong — a
+  plain import kept the code inside the shared `(site)/layout` chunk, and only crossing a
+  client boundary with `next/dynamic` actually split it.
 - The inline endpoint's allow-list, one attempt each: no session → 401; unknown setting key,
   `published`, `sortOrder`, an invented collection and an id of `1 OR 1=1` → 400; 101 edits
   → 413; a declared text field → 200.
