@@ -275,65 +275,30 @@ Accepted, with reasons:
   but do not put a caching CDN in front without varying on the cookie, or one admin request
   could be cached and served to visitors.
 
-## First deploy
+## Deploying
 
-Run from the server, with the GalleryFlow stack already up.
+The full runbook — with the verification after each step and what each failure mode
+actually means — is **[DEPLOY.md](DEPLOY.md)**. Kept there rather than duplicated here
+so the two cannot drift.
 
-**1. Provision the database** (once).
+The shape of it, so you know what you are in for:
 
-```bash
-openssl rand -base64 24                       # generate the password
-$EDITOR infrastructure/postgres/001-create-database.sql   # paste it over REPLACE_ME
-cd /path/to/galleryflow
-docker compose exec -T postgres psql -U galleryflow -d postgres \
-  < /path/to/patilstudio/infrastructure/postgres/001-create-database.sql
-```
-
-Then run the four verification queries listed at the bottom of that file — in
-particular confirm GalleryFlow still connects, since the script revokes a default
-`PUBLIC` grant on its database.
-
-**2. Configure.**
-
-```bash
-cp .env.example .env
-openssl rand -base64 24    # ADMIN_PASSWORD — without it /admin is closed
-openssl rand -base64 32    # ADMIN_SESSION_SECRET (optional)
-$EDITOR .env               # SITE_DOMAIN, DATABASE_URL, ADMIN_PASSWORD
-```
-
-URL-encode the database password if it contains `@ : / ? #` or `%`.
-
-**3. DNS, before you start the container.** `A` records for `patilstudio.in` **and**
-`www.patilstudio.in` → the server's IP. Let it resolve first: certificates issue over
-HTTP-01 on port 80, and Let's Encrypt rate-limits repeated failures.
-
-**4. Up.**
-
-```bash
-docker compose up -d --build
-```
-
-The entrypoint applies `prisma migrate deploy` against the `patilstudio` database,
-then starts the server. Traefik discovers the container off the Docker socket within
-seconds — **no GalleryFlow restart is needed**.
-
-**5. Verify from outside the server**, not from on it:
-
-```bash
-curl -sI https://patilstudio.in | head -3          # 200, and a real certificate
-curl -s  https://patilstudio.in/api/health         # {"status":"ok"}
-```
-
-If you get Traefik's default self-signed cert, DNS wasn't resolving when ACME ran:
-`docker compose -p galleryflow logs traefik | grep -i acme`.
-
-**6. Fill the site in.** Sign in at `https://patilstudio.in/admin`, press **Load all
-starter content**, then work down the launch checklist on the dashboard: upload the
-studio's photographs, set the hero frame, publish real prices, replace the placeholder
-testimonials, confirm the contact details and the statistics, and only then turn on
-`seo.indexable`. Until that last switch, `robots.txt` disallows everything — which is
-what you want while the page is still full of placeholders.
+1. Confirm the host, and that the **production** Traefik stack is the one running.
+2. Get the code to `/opt/patilstudio` (rsync or git). **Build on the server** — a Mac
+   bakes arm64 Prisma engines, and the image will not start on x86_64.
+3. Provision the database once, from `/opt/galleryflow`, and run the three
+   verification queries.
+4. Both DNS `A` records, resolving **before** the first start (HTTP-01).
+5. `cp .env.example .env`: `SITE_DOMAIN`, the `DATABASE_URL` password, and
+   `ADMIN_PASSWORD` + `ADMIN_SESSION_SECRET` — the panel is closed until the first of
+   those is set.
+6. `docker compose up -d --build`, then verify from outside the server, including that
+   `/admin` redirects to the login rather than opening.
+7. Load starter content in the panel and upload photographs; confirm one is served at
+   `/media/<name>`, which is what proves the volume is mounted.
+8. Back up **both** the new database (`backup-db.sh` dumps only `galleryflow`) and the
+   `patil_uploads` volume — the photographs are not in Postgres, so no dump contains
+   them.
 
 ## Things that will bite you
 
