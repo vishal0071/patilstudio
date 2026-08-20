@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { notifyNewInquiry } from '@/lib/notify';
 import { clientIp } from '@/lib/client-ip';
+import { validateInquiry } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 // This route writes to the database, so it must never be statically evaluated.
@@ -84,19 +85,19 @@ export async function POST(request: Request) {
   // Honeypot tripped: accept it so the bot sees success and moves on, store nothing.
   if (text(payload.company, 100)) return NextResponse.json({ ok: true });
 
-  const name = text(payload.name, 120);
-  const email = text(payload.email, 200);
-  const message = text(payload.message, 4000);
-  if (!name || !email || !message) {
+  // Same rules the form applies in the browser — see lib/validation.ts. The server stays
+  // the authority; the shared module only stops the two from disagreeing.
+  const { values, errors } = validateInquiry(payload);
+  if (Object.keys(errors).length > 0) {
+    // Field-keyed, so the form can put each message against the input that caused it
+    // instead of showing one sentence at the bottom. `error` is kept for any caller that
+    // only reads a single string.
     return NextResponse.json(
-      { error: 'Name, email and a message are required.' },
+      { error: Object.values(errors)[0], errors },
       { status: 400 },
     );
   }
-  // Deliberately permissive: rejecting an odd-but-valid address loses a booking.
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-    return NextResponse.json({ error: 'That email address looks wrong.' }, { status: 400 });
-  }
+  const { name, email, message, phone } = values;
 
   let inquiry;
   try {
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
         name,
         email,
         message,
-        phone: text(payload.phone, 40),
+        phone,
         eventType: text(payload.eventType, 120),
         eventDate: text(payload.eventDate, 120),
         eventLocation: text(payload.eventLocation, 200),

@@ -281,6 +281,14 @@ body {
     outline: none;
     border-bottom-color: var(--color-gold);
   }
+  /* Invalid state: the rule under the field turns, nothing moves. Adding a border or a
+     line below would reflow the next field as the visitor tabs through the form. */
+  .field-invalid {
+    border-bottom-color: rgb(252 165 165 / 0.75);
+  }
+  .field-invalid:focus {
+    border-bottom-color: rgb(252 165 165);
+  }
   .field-label {
     display: block;
     font-size: 0.625rem;

@@ -318,6 +318,22 @@ The shape of it, so you know what you are in for:
   and rebuilding — the browser blocks it silently otherwise. This is the same class
   of bug that broke GalleryFlow's uploads when the R2 origin was missing from
   `connect-src`.
+- **Enquiry validation rules live in one module used by BOTH sides**
+  ([lib/validation.ts](lib/validation.ts)). They were split before — HTML attributes in the
+  browser, a separate regex on the server — and the two disagreed in three ways that each
+  looked like broken validation: `someone@localhost` satisfies `type="email"` so it only
+  failed after a round trip; a name of three spaces satisfies `required` and then came back
+  as the generic "Name, email and a message are required"; and `type="tel"` validates
+  nothing, so "not a phone at all" was accepted and stored. If you add a rule, add it there
+  — not to the form and not to the route handler.
+- **The form is `noValidate`, deliberately.** Native bubbles would duplicate and sometimes
+  contradict the inline messages, and cannot be styled. The constraint attributes stay on
+  each input for assistive technology; the JavaScript owns the messaging.
+- **Field errors complain on blur and forgive on input.** Validating every keystroke tells
+  someone their email is wrong while they are still typing the local part; leaving a message
+  up after it has been corrected is worse. So a field is only flagged once left (or on a
+  submit attempt), and once flagged it re-checks on every keystroke so the message clears
+  the moment it becomes valid.
 - **The inquiry rate limiter counts writes, not attempts**, and is in-process
   (therefore per container). Counting attempts locks out a visitor who mistypes their
   email twice — found by testing, and on an enquiry form that is a lost booking. Fine
@@ -506,6 +522,14 @@ down — nothing in the GalleryFlow stack was touched:
 - The toolbar is inside the viewport and its Edit button is the topmost element at its own
   centre (`elementFromPoint`) at both 1440px and 390px; at 390px it clears the sticky CTA
   bar (toolbar bottom edge 96px, bar top edge 57px).
+- **Enquiry validation, driven with real mouse and key events in a browser** (synthetic
+  `focus()`/`blur()` does not fire what React listens to, and a `scrollIntoView` read mid
+  smooth-scroll clicks the wrong place — both produced false failures before the harness was
+  fixed): an untouched submit flags all four fields, moves focus to the first, and issues no
+  request; `A` / `abc` / `x@y` / `hi` each get their own message; correcting a field clears
+  its message without leaving it; a valid submission returns 201, shows the success panel
+  and offers WhatsApp. The same five payloads posted directly to the route — bypassing the
+  form entirely — return 400 with field-keyed errors, and a valid one returns 201.
 - The security fixes, each with a test that failed before it: a forged `X-Forwarded-For`
   plus a real appended hop now exhausts after 5 writes and returns 429 (previously 201
   forever), a different real client still gets its own budget, and an unproxied request

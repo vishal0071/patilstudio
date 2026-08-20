@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { BUDGET_BANDS, EVENT_TYPES, SERVICE_OPTIONS } from '@/lib/content';
+import {
+  EMAIL_PATTERN,
+  PHONE_PATTERN,
+  type FieldErrors,
+  validateInquiry,
+} from '@/lib/validation';
 import { ArrowRightIcon, WhatsAppIcon } from '@/components/ui/icons';
 
 type State = { kind: 'idle' | 'sending' | 'sent' } | { kind: 'error'; message: string };
@@ -33,6 +39,16 @@ export type EnquiryFormCopy = {
 export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
   const [state, setState] = useState<State>({ kind: 'idle' });
   const [preselectedPackage, setPreselectedPackage] = useState<string | null>(null);
+  /**
+   * Per-field messages, from the same validator the route handler uses.
+   *
+   * `touched` is what keeps this from being hostile: a field is only marked wrong after
+   * the visitor has left it, or after they have tried to submit. Validating on the first
+   * keystroke tells someone their email is invalid while they are still typing the local
+   * part, which reads as the form arguing with them.
+   */
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   /**
    * Read `?package=signature` from the URL after mount rather than with
@@ -44,11 +60,45 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
     if (value) setPreselectedPackage(value);
   }, []);
 
+  /** Re-checks one field, but only reports it once that field has been left. */
+  function revalidate(form: HTMLFormElement, markTouched?: string) {
+    const data = new FormData(form);
+    const { errors: next } = validateInquiry({
+      name: data.get('name'),
+      phone: data.get('phone'),
+      email: data.get('email'),
+      message: data.get('message'),
+    });
+    setErrors(next);
+    if (markTouched) setTouched((prev) => ({ ...prev, [markTouched]: true }));
+    return next;
+  }
+
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ kind: 'sending' });
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
 
-    const form = new FormData(event.currentTarget);
+    // Check here, with the server's own rules, before spending a round trip on something
+    // the server is certain to refuse. Focus the first offending field so the visitor is
+    // not left scanning the form for what it objects to.
+    const found = validateInquiry({
+      name: form.get('name'),
+      phone: form.get('phone'),
+      email: form.get('email'),
+      message: form.get('message'),
+    }).errors;
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      setTouched({ name: true, phone: true, email: true, message: true });
+      setState({ kind: 'idle' });
+      const first = Object.keys(found)[0];
+      (formElement.elements.namedItem(first) as HTMLElement | null)?.focus();
+      return;
+    }
+
+    setErrors({});
+    setState({ kind: 'sending' });
     const payload = {
       ...Object.fromEntries(form),
       // Multi-value checkboxes: FormData.entries() keeps only the last one.
@@ -64,8 +114,18 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const body = (await response.json()) as { error?: string };
+      const body = (await response.json()) as { error?: string; errors?: FieldErrors };
       if (!response.ok) {
+        // The server disagreed after all — surface it against the fields, not just as a
+        // banner, so it reads the same as client-side validation.
+        if (body.errors && Object.keys(body.errors).length > 0) {
+          setErrors(body.errors);
+          setTouched({ name: true, phone: true, email: true, message: true });
+          setState({ kind: 'idle' });
+          const first = Object.keys(body.errors)[0];
+          (formElement.elements.namedItem(first) as HTMLElement | null)?.focus();
+          return;
+        }
         setState({ kind: 'error', message: body.error ?? 'Something went wrong.' });
         return;
       }
@@ -77,6 +137,28 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
       });
     }
   }
+
+  /** A field shows its message only once it has been left, or a submit was attempted. */
+  const showError = (field: keyof FieldErrors) => Boolean(touched[field] && errors[field]);
+
+  const fieldProps = (field: keyof FieldErrors) => ({
+    error: showError(field) ? errors[field] : undefined,
+    onBlur: (event: React.FocusEvent<HTMLInputElement>) =>
+      revalidate(event.currentTarget.form as HTMLFormElement, field),
+    /**
+     * Re-checks while typing, but ONLY for a field already showing a message.
+     *
+     * Validating every field on every keystroke tells someone their email is wrong while
+     * they are still typing the local part. But leaving a message up after it has been
+     * corrected is worse: the visitor has fixed it, the form still says it is broken, and
+     * they have no way to know it will now be accepted. So the rule is asymmetric —
+     * complain on leaving, forgive on typing.
+     */
+    onInput: showError(field)
+      ? (event: React.FormEvent<HTMLInputElement>) =>
+          revalidate(event.currentTarget.form as HTMLFormElement)
+      : undefined,
+  });
 
   if (state.kind === 'sent') {
     return (
@@ -98,7 +180,11 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-7" noValidate={false}>
+    /* `noValidate`: the browser's own bubbles would now duplicate — and sometimes
+       contradict — the inline messages, and they cannot be styled to match the page. The
+       constraint attributes stay on each input so assistive technology still announces
+       them. */
+    <form onSubmit={onSubmit} noValidate className="grid gap-7">
       {/* Honeypot — a person never fills a hidden field; most bots fill everything. */}
       <input
         type="text"
@@ -117,18 +203,28 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
       <input type="hidden" name="package" value={preselectedPackage ?? ''} />
 
       <div className="grid gap-7 sm:grid-cols-2">
-        <Field name="name" label="Full name" required autoComplete="name" />
+        <Field name="name" label="Full name" required autoComplete="name" {...fieldProps('name')} />
         <Field
           name="phone"
           label="Phone number"
           type="tel"
           required
           autoComplete="tel"
-          placeholder="+91"
+          placeholder="+91 98765 43210"
+          pattern={PHONE_PATTERN}
+          {...fieldProps('phone')}
         />
       </div>
 
-      <Field name="email" label="Email" type="email" required autoComplete="email" />
+      <Field
+        name="email"
+        label="Email"
+        type="email"
+        required
+        autoComplete="email"
+        pattern={EMAIL_PATTERN}
+        {...fieldProps('email')}
+      />
 
       <div className="grid gap-7 sm:grid-cols-2">
         <Select name="eventType" label="Event type" options={EVENT_TYPES} />
@@ -163,14 +259,32 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
       </fieldset>
 
       <label className="block">
-        <span className="field-label">Message</span>
+        <span className="field-label">
+          Message
+          {showError('message') && (
+            <span className="ml-2 normal-case text-red-300">{errors.message}</span>
+          )}
+        </span>
         <textarea
           name="message"
           rows={4}
           required
+          aria-invalid={showError('message') || undefined}
+          aria-describedby={showError('message') ? 'err-message' : undefined}
+          onBlur={(event) => revalidate(event.currentTarget.form as HTMLFormElement, 'message')}
+          onInput={
+            showError('message')
+              ? (event) => revalidate(event.currentTarget.form as HTMLFormElement)
+              : undefined
+          }
           placeholder="Tell us about your celebration — what you're planning and what matters most to you."
-          className="field resize-y"
+          className={`field resize-y ${showError('message') ? 'field-invalid' : ''}`}
         />
+        {showError('message') && (
+          <span id="err-message" className="sr-only">
+            {errors.message}
+          </span>
+        )}
       </label>
 
       {state.kind === 'error' && (
@@ -209,6 +323,10 @@ function Field({
   required = false,
   placeholder,
   autoComplete,
+  pattern,
+  error,
+  onBlur,
+  onInput,
 }: {
   name: string;
   label: string;
@@ -216,21 +334,41 @@ function Field({
   required?: boolean;
   placeholder?: string;
   autoComplete?: string;
+  pattern?: string;
+  /** Already gated on "touched" by the caller; present means show it. */
+  error?: string;
+  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+  onInput?: (event: React.FormEvent<HTMLInputElement>) => void;
 }) {
+  const errorId = `err-${name}`;
   return (
     <label className="block">
       <span className="field-label">
         {label}
         {!required && <span className="ml-1.5 normal-case opacity-60">(optional)</span>}
+        {/* The message sits in the label rather than below the input: the fields are
+            bottom-ruled with tight vertical rhythm, and appending a line under one would
+            shove the next field down as you tab through the form. */}
+        {error && <span className="ml-2 normal-case text-red-300">{error}</span>}
       </span>
       <input
         name={name}
         type={type}
         required={required}
+        pattern={pattern}
         placeholder={placeholder}
         autoComplete={autoComplete}
-        className="field"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
+        onBlur={onBlur}
+        onInput={onInput}
+        className={`field ${error ? 'field-invalid' : ''}`}
       />
+      {error && (
+        <span id={errorId} className="sr-only">
+          {error}
+        </span>
+      )}
     </label>
   );
 }
