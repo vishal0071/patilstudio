@@ -42,21 +42,54 @@ export const EMAIL_PATTERN = '[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}';
 const EMAIL_RE = new RegExp(`^${EMAIL_PATTERN}$`);
 
 /**
- * Digits, and the punctuation people actually type: + ( ) - . and spaces. Between 8 and
- * 15 digits — 15 is the E.164 maximum, and 8 admits Indian landlines with an STD code
- * as well as the 10-digit mobiles most enquiries will use.
+ * Digits, and the punctuation people actually type: + ( ) - . and spaces.
+ *
+ * **Ten digits minimum.** The floor was 8, reasoning about short landline formats, and
+ * that accepted `777003914` — nine digits, which is a mistyped Indian mobile. Every
+ * dialable Indian number is at least ten digits (a 10-digit mobile or landline, 11 with
+ * the STD trunk `0`, 12 with the `91` country code), so a shorter one is a typo and the
+ * studio would be calling a dead number. 15 is the E.164 ceiling, which keeps
+ * international enquiries working.
+ *
+ * A number below ten digits is rejected even if it is a valid local number somewhere,
+ * because without a country code nobody in Pune can dial it.
  */
-export const PHONE_PATTERN = '[+()0-9.\\- ]{8,24}';
-const PHONE_ALLOWED_RE = new RegExp(`^${PHONE_PATTERN}$`);
+export const PHONE_MIN_DIGITS = 10;
+export const PHONE_MAX_DIGITS = 15;
+
+/**
+ * Character check and length check are deliberately separate.
+ *
+ * One combined `{10,24}` pattern did both, and so misreported the interesting case: a
+ * nine-digit number is pure digits, but failed the character regex on length and was
+ * told "digits, spaces, + and ( ) - only" — advice that describes exactly what the
+ * visitor already typed. Splitting them means "too short" can say "too short".
+ */
+const PHONE_ALLOWED_RE = /^[+()0-9.\- ]+$/;
+
+/** Hint for the `pattern` attribute; the real check is `checkPhone`. */
+export const PHONE_PATTERN = '[+()0-9.\\- ]{10,24}';
 
 export function isEmail(value: string): boolean {
   return EMAIL_RE.test(value);
 }
 
+/** Why a phone number was refused, so the form can say something useful. */
+export type PhoneVerdict = 'ok' | 'chars' | 'short' | 'long' | 'repeated';
+
+export function checkPhone(value: string): PhoneVerdict {
+  if (!PHONE_ALLOWED_RE.test(value)) return 'chars';
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < PHONE_MIN_DIGITS) return 'short';
+  if (digits.length > PHONE_MAX_DIGITS) return 'long';
+  // 0000000000 and 7777777777 are what people type to get past a required field. They
+  // are never real, and an enquiry the studio cannot answer is worse than no enquiry.
+  if (/^(\d)\1+$/.test(digits)) return 'repeated';
+  return 'ok';
+}
+
 export function isPhone(value: string): boolean {
-  if (!PHONE_ALLOWED_RE.test(value)) return false;
-  const digits = value.replace(/\D/g, '').length;
-  return digits >= 8 && digits <= 15;
+  return checkPhone(value) === 'ok';
 }
 
 /**
@@ -82,8 +115,22 @@ export function validateInquiry(input: Partial<Record<keyof InquiryFields, unkno
   if (values.name.length === 0) errors.name = 'Please tell us your name.';
   else if (values.name.length < 2) errors.name = 'That looks too short to be a name.';
 
-  if (values.phone.length === 0) errors.phone = 'Please add a phone number so we can reply.';
-  else if (!isPhone(values.phone)) errors.phone = 'That does not look like a phone number.';
+  if (values.phone.length === 0) {
+    errors.phone = 'Please add a phone number so we can reply.';
+  } else {
+    // Distinct messages: "that looks wrong" leaves someone re-reading their own number
+    // with no idea what to change.
+    const verdict = checkPhone(values.phone);
+    if (verdict === 'short') {
+      errors.phone = 'That looks short — please give all 10 digits, or add your country code.';
+    } else if (verdict === 'long') {
+      errors.phone = 'That has too many digits to be a phone number.';
+    } else if (verdict === 'repeated') {
+      errors.phone = 'Please give a number we can actually reach you on.';
+    } else if (verdict === 'chars') {
+      errors.phone = 'Digits, spaces, + and ( ) - only, please.';
+    }
+  }
 
   if (values.email.length === 0) errors.email = 'Please add an email address.';
   else if (!isEmail(values.email)) errors.email = 'That email address looks incomplete.';

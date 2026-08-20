@@ -326,6 +326,16 @@ The shape of it, so you know what you are in for:
   as the generic "Name, email and a message are required"; and `type="tel"` validates
   nothing, so "not a phone at all" was accepted and stored. If you add a rule, add it there
   — not to the form and not to the route handler.
+- **A phone number needs 10 digits, not 8.** The floor was 8, reasoning about short
+  landline formats, and it accepted `777003914` — nine digits, a mistyped Indian mobile the
+  studio would then have called in vain. Every dialable Indian number is at least ten digits
+  (10 local, 11 with the trunk `0`, 12 with `91`), and 15 is the E.164 ceiling for
+  international enquiries. All-identical digits are refused too: `0000000000` and
+  `7777777777` are what people type to get past a required field.
+- **Keep the character check and the length check separate.** One combined `{10,24}` pattern
+  did both, so a nine-digit number failed on *length* but was reported as "digits, spaces, +
+  and ( ) - only" — advice describing exactly what the visitor had already typed. Splitting
+  them is what lets "too short" say "too short".
 - **The form is `noValidate`, deliberately.** Native bubbles would duplicate and sometimes
   contradict the inline messages, and cannot be styled. The constraint attributes stay on
   each input for assistive technology; the JavaScript owns the messaging.
@@ -522,6 +532,12 @@ down — nothing in the GalleryFlow stack was touched:
 - The toolbar is inside the viewport and its Edit button is the topmost element at its own
   centre (`elementFromPoint`) at both 1440px and 390px; at 390px it clears the sticky CTA
   bar (toolbar bottom edge 96px, bar top edge 57px).
+- Phone validation across 18 formats through the shared validator: `777003914`, `98765 4321`,
+  `12345`, `0000000000`, `7777777777`, a 16-digit number, and letters hidden among digits all
+  refused with the message that matches the actual mistake; Indian mobile in three formats, a
+  Pune landline with and without its STD code, punctuation, and US/UK/UAE numbers all
+  accepted. Confirmed again through the browser and through direct POSTs, with only the
+  valid numbers reaching Postgres.
 - **Enquiry validation, driven with real mouse and key events in a browser** (synthetic
   `focus()`/`blur()` does not fire what React listens to, and a `scrollIntoView` read mid
   smooth-scroll clicks the wrong place — both produced false failures before the harness was
