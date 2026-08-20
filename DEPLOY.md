@@ -161,6 +161,12 @@ before continuing.
 The first succeeding is what proves the revoke did not lock GalleryFlow out of its own
 database.
 
+**These three test privileges, not passwords.** They run over the Unix socket, which
+the image's `pg_hba.conf` sets to `trust`, so they succeed regardless of what password
+the role has — the `CONNECT` check they do exercise happens after authentication and is
+unaffected. To verify the password itself, use the TCP command in **Resetting the
+database password**.
+
 ## 3. DNS — before you start the container
 
 Both records, at your registrar or DNS host:
@@ -467,12 +473,23 @@ Expect `ALTER ROLE`. Then prove the credential works *before* touching `.env`, s
 are testing one thing at a time:
 
 ```bash
-cd /opt/galleryflow
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T \
-  -e PGPASSWORD="$NEW_PW" postgres psql -U patilstudio -d patilstudio -tAc 'select 1'
+docker run --rm --network galleryflow_galleryflow -e PGPASSWORD="$NEW_PW" \
+  postgres:17-alpine psql -h postgres -U patilstudio -d patilstudio -tAc 'select 1'
 ```
 
-`1` means the role and password agree. Now put that exact value into `.env`:
+`1` means the role and the password agree. A wrong password prints
+`FATAL: password authentication failed for user "patilstudio"`.
+
+**It must be this command, from a separate container over TCP.** A
+`docker compose exec postgres psql -U patilstudio` proves nothing about the password:
+the official image's `pg_hba.conf` is `local all all trust` and
+`host all all 127.0.0.1/32 trust`, so connections over the socket or via loopback skip
+authentication entirely and succeed with *any* password, including none. Only
+`host all all all scram-sha-256` — which is what a request from another container on
+the Docker network matches — actually checks it. That is the app's path, so that is
+the path to test on.
+
+Now put that exact value into `.env`:
 
 ```bash
 cd /opt/patilstudio
