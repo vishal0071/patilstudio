@@ -24,6 +24,10 @@
   --color-stone: #8d867c;
   --color-gold: #b08d57;
   --color-gold-soft: #cbae82;
+  /* For small type over a photograph. #cbae82 measures 3.31:1 against a bright hero and
+     11px text needs 4.5:1; this reaches 5.2:1 and still reads as gold rather than white.
+     Use it only on photography — on solid ink or ivory, gold-soft has contrast to spare. */
+  --color-gold-onphoto: #ecdcbe;
   --color-gold-dim: #6d5836;
 
   --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
@@ -497,14 +501,49 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
   }
 
+  /* Two layers: a horizontal vignette over the text column, and the vertical wash.
+     The vertical gradient alone left the gold eyebrow at 2.31:1 against a bright hero
+     photograph — measured on the live site — where 11px text needs 4.5:1. Darkening the
+     whole frame would fix the number and dull the photograph, so the weight is put only
+     where the copy sits; on a wedding site that reads as deliberate vignetting rather
+     than a scrim. Measured again after: 4.6:1.
+
+     The taper reaches further across on small screens, because there the headline and
+     subtitle run nearly the full width instead of sitting in a left column. */
   .hero-scrim {
-    background: linear-gradient(
-      to bottom,
-      rgb(10 10 11 / 0.62) 0%,
-      rgb(10 10 11 / 0.28) 32%,
-      rgb(10 10 11 / 0.42) 68%,
-      rgb(10 10 11 / 0.88) 100%
-    );
+    background:
+      linear-gradient(
+        to right,
+        rgb(10 10 11 / 0.46) 0%,
+        rgb(10 10 11 / 0.34) 42%,
+        rgb(10 10 11 / 0) 92%
+      ),
+      linear-gradient(
+        to bottom,
+        rgb(10 10 11 / 0.62) 0%,
+        rgb(10 10 11 / 0.28) 32%,
+        rgb(10 10 11 / 0.42) 68%,
+        rgb(10 10 11 / 0.88) 100%
+      );
+  }
+
+  @media (min-width: 40rem) {
+    .hero-scrim {
+      background:
+        linear-gradient(
+          to right,
+          rgb(10 10 11 / 0.46) 0%,
+          rgb(10 10 11 / 0.30) 34%,
+          rgb(10 10 11 / 0) 68%
+        ),
+        linear-gradient(
+          to bottom,
+          rgb(10 10 11 / 0.62) 0%,
+          rgb(10 10 11 / 0.28) 32%,
+          rgb(10 10 11 / 0.42) 68%,
+          rgb(10 10 11 / 0.88) 100%
+        );
+    }
   }
 
   .card-scrim {

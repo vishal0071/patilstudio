@@ -181,6 +181,30 @@ Two implementation traps, both hit while building this:
   which is why depth is applied to the card plane and to the caption — never inside the
   frame.
 
+## Text over photographs
+
+The hero scrim is two gradients: a vertical wash plus a **horizontal vignette over the text
+column**. Measured on the live site with a real wedding photograph behind it, the vertical
+wash alone left the 11px gold eyebrow at **2.31:1** where WCAG wants 4.5:1. Darkening the
+whole frame would have fixed the number and dulled the photograph, so the weight goes only
+where the copy sits — which on a wedding site reads as deliberate vignetting.
+
+The eyebrow also moved from `--color-gold-soft` (#cbae82) to `--color-gold-onphoto`
+(#ecdcbe). Gold on a warm photograph is inherently low-contrast: even behind the vignette
+the original measured 3.31:1 at 390px. The paler tone reaches 5.2:1 and still reads as gold
+rather than white. **Use `gold-onphoto` only for small type over photography** — on solid
+ink or ivory, `gold-soft` has contrast to spare.
+
+After both changes, against a hero as bright as the live one: eyebrow 5.2:1 / 6.3:1,
+headline 5.25:1 / 4.57:1, subtitle 5.16:1 / 8.01:1 at 390px / 1440px. Sampled against the
+**brightest quarter** of the pixels under the actual glyph bounds (`Range.getBoundingClientRect`),
+not the average of the block — a block `<p>` spans the whole shell, and averaging it hides
+the bright patch a word actually sits on.
+
+Measure this in the browser with a canvas, not by decoding a screenshot. Chrome's
+`captureScreenshot` PNG is not always RGBA, and a hand-rolled decoder that assumes it
+returns confident nonsense — it reported a green background for a warm photograph here.
+
 ## The logo
 
 `brand.logoPath` in **Text & settings** — upload there, or

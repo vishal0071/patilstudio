@@ -44,7 +44,7 @@ export function Hero({ settings }: { settings: Settings }) {
 
       <div className="shell relative flex h-full flex-col justify-end pb-20 sm:pb-24">
         <p
-          className="eyebrow animate-fade-up text-gold-soft"
+          className="eyebrow animate-fade-up text-gold-onphoto"
           style={{ animationDelay: '160ms' }}
           {...editableSetting('hero.eyebrow')}
         >
