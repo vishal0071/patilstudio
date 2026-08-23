@@ -15,7 +15,9 @@ import {
   defaultValues,
 } from './defaults';
 import { type Settings, settingDefaults } from './settings';
+import { areaIsSubstantive } from './types';
 import type {
+  AreaTier,
   ComparisonRow,
   FaqItem,
   Film,
@@ -24,6 +26,7 @@ import type {
   Photo,
   PortfolioItem,
   Service,
+  ServiceArea,
   SiteContent,
   StoryChapter,
   Testimonial,
@@ -83,6 +86,10 @@ async function readContent(): Promise<SiteContent> {
     instagram: defaultInstagram,
     values: defaultValues,
     process: defaultProcess,
+    // No default areas. Every other collection has seed content because a finished-looking
+    // page is better than an empty one — but a location page invented by this repository
+    // would be exactly the thin, templated content the guard exists to prevent.
+    areas: [],
   });
 
   try {
@@ -97,6 +104,7 @@ async function readContent(): Promise<SiteContent> {
       films,
       faqs,
       instagram,
+      areas,
     ] = await Promise.all([
       prisma.siteSetting.findMany(),
       prisma.service.findMany({ where: { published: true }, orderBy: { sortOrder: 'asc' } }),
@@ -116,6 +124,10 @@ async function readContent(): Promise<SiteContent> {
       prisma.instagramItem.findMany({
         where: { published: true },
         orderBy: { sortOrder: 'asc' },
+      }),
+      prisma.serviceArea.findMany({
+        where: { published: true },
+        orderBy: [{ tier: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
       }),
     ]);
 
@@ -143,6 +155,9 @@ async function readContent(): Promise<SiteContent> {
       // structure, not content. Editing them is a code change, on purpose.
       values: defaultValues,
       process: defaultProcess,
+      // Published AND substantive. `published` is the studio's intent; the second test is
+      // the one that keeps a half-written draft out of the site and the sitemap.
+      areas: areas.filter(areaIsSubstantive).map(toServiceArea),
     };
   } catch (error) {
     console.error('[content] falling back to defaults — could not read from Postgres', error);
@@ -317,5 +332,35 @@ function toInstagramItem(row: {
     id: row.id,
     photo: toPhoto({ ...row, imageRatio: 'square' }, 'square'),
     permalink: row.permalink?.trim() || null,
+  };
+}
+
+function toServiceArea(row: {
+  id: string;
+  slug: string;
+  name: string;
+  tier: AreaTier;
+  parent: string | null;
+  intro: string;
+  venues: string[];
+  notes: string;
+  seoTitle: string;
+  seoDescription: string;
+  imagePath: string | null;
+  imageAlt: string | null;
+  imageBrief: string | null;
+}): ServiceArea {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    tier: row.tier,
+    parent: row.parent?.trim() || null,
+    intro: row.intro,
+    venues: row.venues,
+    notes: row.notes,
+    seoTitle: row.seoTitle.trim(),
+    seoDescription: row.seoDescription.trim(),
+    photo: toPhoto({ ...row, imageRatio: 'landscape' }),
   };
 }

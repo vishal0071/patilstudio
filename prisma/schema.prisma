@@ -255,3 +255,57 @@ model InstagramItem {
 
   @@index([published, sortOrder])
 }
+
+/// A place the studio covers: a Pune neighbourhood, a Maharashtra city, or the region.
+///
+/// These back /wedding-photographer/<slug>, which is what actually ranks for "wedding
+/// photographer katraj" — a home-page anchor never will.
+///
+/// THE RISK THIS MODEL IS SHAPED AROUND: forty pages differing only by place name are
+/// doorway pages under Google's spam policy, and the penalty applies to the whole domain.
+/// So `intro` and `venues` are not decoration. lib/content/index.ts refuses to serve or
+/// list an area whose `intro` is too short to be real writing, whatever `published` says —
+/// a half-filled draft simply does not exist as far as the site and the sitemap are
+/// concerned. Seed rows arrive unpublished and empty on purpose.
+model ServiceArea {
+  id     String   @id @default(uuid(7)) @db.Uuid
+  slug   String   @unique
+  /// Display name, e.g. "Katraj", "Nashik".
+  name   String
+  /// Which level this sits at — drives the copy, the hierarchy and the breadcrumb.
+  tier   AreaTier @default(NEIGHBOURHOOD)
+  /// Parent place for a breadcrumb, e.g. "Pune" for Katraj. Free text.
+  parent String?
+
+  /// The studio's own words about working there. The substance test above reads this.
+  intro  String   @default("")
+  /// Real venues worked at in this area — the single most useful thing on the page, and
+  /// the hardest for a competitor or a template to fake.
+  venues String[]
+  /// Optional extra paragraphs: travel, timings, anything specific to the place.
+  notes  String   @default("")
+
+  /// Overrides for the title tag and meta description; generated from `name` when empty.
+  seoTitle       String @default("")
+  seoDescription String @default("")
+
+  imagePath  String?
+  imageAlt   String?
+  imageBrief String?
+
+  sortOrder Int      @default(0)
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, tier, sortOrder])
+}
+
+enum AreaTier {
+  /// A locality within a city — Katraj, Narhe, Kothrud.
+  NEIGHBOURHOOD
+  /// A city — Pune, Nashik, Kolhapur.
+  CITY
+  /// A whole region — Maharashtra.
+  REGION
+}

@@ -227,6 +227,33 @@ widget in the admin form, matched by suffix so a new one picks it up automatical
 were plain text inputs before, which meant the panel asked for a path the studio had no way
 to produce — the live editor and the import CLI were the only routes in.
 
+## Location pages
+
+`/wedding-photographer/<slug>` — one page per Pune locality, Maharashtra city, and the
+region, listed at `/wedding-photographer` and linked from the footer. This is what ranks
+for "wedding photographer katraj"; a home-page anchor never will. Edit them under **Areas
+covered** in the admin panel, where 49 drafts are seeded (30 Pune localities, 18 cities,
+Maharashtra).
+
+**They are seeded empty and unpublished, and that is the point.** Forty pages differing
+only by place name are doorway pages under Google's spam policy, and the penalty applies to
+the whole domain — not just those pages. So substance is enforced in the data layer, not
+left to whoever is editing: `getContent()` drops any area whose `intro` is under
+`AREA_MIN_INTRO` (320 characters) unless it lists three or more venues. Below that bar the
+page 404s, is absent from the sitemap, and is not linked from the hub, **whatever
+`published` says**. Verified at each threshold: 49 drafts → nothing; published with a
+36-character intro → still 404 and absent; 320+ characters → live and listed; three venues
+with a short intro → live.
+
+What makes one of these pages legitimately worth having is the part this repository cannot
+write: the venues the studio has actually shot at, how travel works, what a particular lawn
+looks like in December. `defaults.ts` therefore seeds names and slugs only — no copy.
+
+Each page emits a `Service` node scoped to that place with `areaServed`/`containedInPlace`,
+pointing at the single `#business` LocalBusiness declared on the home page. **Do not
+re-declare LocalBusiness per location** — duplicate nodes read as separate premises that do
+not exist, which is a standard local-SEO own goal.
+
 ## Importing photographs
 
 The admin panel uploads one frame at a time, which is right for swapping a hero and wrong

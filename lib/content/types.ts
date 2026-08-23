@@ -150,6 +150,42 @@ export type ProcessStep = {
   body: string;
 };
 
+export const AREA_TIERS = ['NEIGHBOURHOOD', 'CITY', 'REGION'] as const;
+export type AreaTier = (typeof AREA_TIERS)[number];
+
+export type ServiceArea = {
+  id: string;
+  slug: string;
+  name: string;
+  tier: AreaTier;
+  parent: string | null;
+  intro: string;
+  venues: string[];
+  notes: string;
+  seoTitle: string;
+  seoDescription: string;
+  photo: Photo;
+};
+
+/**
+ * The minimum intro length an area needs before the site will serve its page.
+ *
+ * This is the doorway-page guard, and it is a real threshold rather than a gesture: 320
+ * characters is roughly two written sentences about a specific place, which is more than
+ * a name-swapped template produces. Below it the page is treated as non-existent — no
+ * route, no sitemap entry, no link — because a set of near-identical location pages is
+ * penalised across the whole domain, not just on the pages themselves.
+ */
+export const AREA_MIN_INTRO = 320;
+
+/** Whether an area has enough of the studio's own writing to be worth publishing. */
+export function areaIsSubstantive(area: {
+  intro: string;
+  venues: string[];
+}): boolean {
+  return area.intro.trim().length >= AREA_MIN_INTRO || area.venues.length >= 3;
+}
+
 export type SiteContent = {
   settings: Settings;
   services: Service[];
@@ -163,4 +199,5 @@ export type SiteContent = {
   instagram: InstagramItem[];
   values: ValueProp[];
   process: ProcessStep[];
+  areas: ServiceArea[];
 };

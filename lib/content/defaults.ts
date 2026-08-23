@@ -510,6 +510,53 @@ export const defaultProcess: ProcessStep[] = [
   },
 ];
 
+/**
+ * Draft location pages, seeded EMPTY and UNPUBLISHED.
+ *
+ * Only the name, the slug and the tier — deliberately no copy. A location page is only
+ * worth having if it says something true about working in that place: the venues the
+ * studio has actually shot at, how travel works, what the light is like at a particular
+ * lawn in December. This repository cannot know any of that, and inventing it would
+ * produce precisely the templated, near-identical pages that get a domain penalised.
+ *
+ * So these are a worklist, not content. Each one stays invisible to the site and the
+ * sitemap until it has real writing in it — see `areaIsSubstantive`.
+ */
+export const defaultServiceAreas: {
+  slug: string;
+  name: string;
+  tier: 'NEIGHBOURHOOD' | 'CITY' | 'REGION';
+  parent: string | null;
+}[] = [
+  // Pune localities — where most enquiries come from, and where "near me" searches land.
+  ...[
+    'Katraj', 'Narhe', 'Kothrud', 'Warje', 'Bibwewadi', 'Kondhwa', 'Hadapsar',
+    'Viman Nagar', 'Kharadi', 'Wagholi', 'Baner', 'Aundh', 'Wakad', 'Hinjawadi',
+    'Pimpri-Chinchwad', 'Chakan', 'Talegaon', 'Shivajinagar', 'Deccan', 'Karve Nagar',
+    'Sinhagad Road', 'Dhayari', 'Ambegaon', 'Undri', 'Magarpatta', 'Pashan',
+    'Bavdhan', 'Balewadi', 'Ravet', 'Nigdi',
+  ].map((name) => ({
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    name,
+    tier: 'NEIGHBOURHOOD' as const,
+    parent: 'Pune',
+  })),
+
+  // Maharashtra cities — destination weddings and travel work.
+  ...[
+    'Pune', 'Mumbai', 'Nashik', 'Nagpur', 'Kolhapur', 'Aurangabad', 'Solapur',
+    'Satara', 'Sangli', 'Ahmednagar', 'Jalgaon', 'Latur', 'Amravati', 'Ratnagiri',
+    'Alibaug', 'Lonavala', 'Mahabaleshwar', 'Shirdi',
+  ].map((name) => ({
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    name,
+    tier: 'CITY' as const,
+    parent: 'Maharashtra',
+  })),
+
+  { slug: 'maharashtra', name: 'Maharashtra', tier: 'REGION', parent: null },
+];
+
 /** Event types offered in the enquiry form's dropdown. */
 export const EVENT_TYPES = [
   'Wedding',

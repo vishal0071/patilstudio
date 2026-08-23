@@ -8,9 +8,10 @@ import {
   defaultPortfolio,
   defaultServices,
   defaultStory,
+  defaultServiceAreas,
   defaultTestimonials,
 } from '@/lib/content/defaults';
-import { PORTFOLIO_CATEGORIES, VIDEO_PROVIDERS } from '@/lib/content/types';
+import { AREA_MIN_INTRO, AREA_TIERS, PORTFOLIO_CATEGORIES, VIDEO_PROVIDERS } from '@/lib/content/types';
 
 /**
  * The admin panel's collections, declared rather than hand-built.
@@ -54,7 +55,8 @@ export type CollectionKey =
   | 'story'
   | 'films'
   | 'faqs'
-  | 'instagram';
+  | 'instagram'
+  | 'areas';
 
 export type Collection = {
   key: CollectionKey;
@@ -396,6 +398,70 @@ export const COLLECTIONS: Record<CollectionKey, Collection> = {
       })),
   },
 
+  areas: {
+    key: 'areas',
+    label: 'Areas covered',
+    singular: 'area',
+    description:
+      `Location pages at /wedding-photographer/<slug>, which is what ranks for "wedding photographer katraj". Seeded as an empty worklist: a page stays invisible to the site and the sitemap until its intro reaches ${AREA_MIN_INTRO} characters or it lists three venues. That threshold is deliberate — a set of near-identical location pages is treated as doorway spam and penalised across the whole site, so each one needs something true about working in that place.`,
+    titleField: 'name',
+    fields: [
+      { name: 'name', label: 'Place', type: 'text', required: true },
+      {
+        name: 'slug',
+        label: 'URL slug',
+        type: 'text',
+        required: true,
+        help: 'Becomes /wedding-photographer/<slug>. Lowercase, hyphens.',
+      },
+      {
+        name: 'tier',
+        label: 'Level',
+        type: 'select',
+        options: AREA_TIERS,
+        initial: 'NEIGHBOURHOOD',
+        help: 'NEIGHBOURHOOD for a Pune locality, CITY for a city, REGION for Maharashtra.',
+      },
+      {
+        name: 'parent',
+        label: 'Sits within',
+        type: 'text',
+        help: 'e.g. "Pune" for Katraj. Shown in the breadcrumb.',
+      },
+      {
+        name: 'intro',
+        label: 'About working here',
+        type: 'textarea',
+        help: `The page will not go live until this reaches ${AREA_MIN_INTRO} characters, or the venue list has three entries. Write what is actually true of shooting here — not "we offer wedding photography in X".`,
+      },
+      {
+        name: 'venues',
+        label: 'Venues worked at',
+        type: 'list',
+        help: 'One per line. The most useful thing on the page, and the hardest for anyone else to copy.',
+      },
+      { name: 'notes', label: 'Extra notes', type: 'textarea', help: 'Travel, timings, anything local. Optional.' },
+      { name: 'seoTitle', label: 'Title tag override', type: 'text', help: 'Optional. Generated from the place name when empty.' },
+      { name: 'seoDescription', label: 'Meta description override', type: 'textarea', help: 'Optional.' },
+      ...IMAGE_FIELDS('A photograph from a wedding in this area.'),
+      ...ORDERING_FIELDS,
+    ],
+    seed: () =>
+      defaultServiceAreas.map((area, i) => ({
+        slug: area.slug,
+        name: area.name,
+        tier: area.tier,
+        parent: area.parent,
+        intro: '',
+        venues: [],
+        notes: '',
+        seoTitle: '',
+        seoDescription: '',
+        sortOrder: i,
+        published: false,
+      })),
+  },
+
   instagram: {
     key: 'instagram',
     label: 'Instagram grid',
@@ -473,6 +539,7 @@ export function delegateFor(key: CollectionKey): Delegate {
     films: prisma.film,
     faqs: prisma.faqItem,
     instagram: prisma.instagramItem,
+    areas: prisma.serviceArea,
   };
   return map[key] as Delegate;
 }

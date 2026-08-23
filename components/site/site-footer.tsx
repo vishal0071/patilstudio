@@ -162,6 +162,11 @@ export function SiteFooter({
             <Link href="/portfolio" className="transition-colors hover:text-ivory">
               Full Portfolio
             </Link>
+            {/* Keeps the location pages reachable by a crawler and a reader. Orphaned
+                pages rank badly and look like the doorway set this is not. */}
+            <Link href="/wedding-photographer" className="transition-colors hover:text-ivory">
+              Areas We Cover
+            </Link>
             <Link href="/#contact" className="transition-colors hover:text-ivory">
               Book Your Date
             </Link>
