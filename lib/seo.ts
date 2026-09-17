@@ -26,6 +26,12 @@ export function buildMetadata(settings: Settings, page?: {
   title?: string;
   description?: string;
   path?: string;
+  /**
+   * The place this page is about, when it is not the studio's own city — an area
+   * page's locality. Without it every page claims `geo.placename: Pune`, so
+   * /wedding-photographer/nashik would contradict its own `areaServed`.
+   */
+  place?: string;
 }): Metadata {
   const base = siteBaseUrl();
   const title = page?.title
@@ -44,13 +50,17 @@ export function buildMetadata(settings: Settings, page?: {
   // LocalBusiness graph do the real work — but they are the pair of lines that state
   // "this site is about Pune" to every crawler that does not parse JSON-LD, and they
   // cost nothing.
+  const place = page?.place?.trim() || city;
   const geo: Record<string, string> = {
     'geo.region': `IN-${regionCode(region)}`,
-    'geo.placename': city,
+    'geo.placename': place,
   };
-  const lat = Number(settings['seo.geoLatitude']);
-  const lon = Number(settings['seo.geoLongitude']);
-  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+  const lat = coordinate(settings['seo.geoLatitude']);
+  const lon = coordinate(settings['seo.geoLongitude']);
+  // Only on pages about the studio's own city. These coordinates are the studio's,
+  // and publishing them beside `geo.placename: Nashik` would be a straight
+  // contradiction — better to say nothing than to point a crawler at the wrong town.
+  if (lat !== null && lon !== null && place === city) {
     geo['geo.position'] = `${lat};${lon}`;
     geo.ICBM = `${lat}, ${lon}`;
   }
@@ -106,6 +116,20 @@ export function buildMetadata(settings: Settings, page?: {
 }
 
 /**
+ * A coordinate setting as a number, or null if it is not one.
+ *
+ * `Number('')` is 0, not NaN, so a plain `Number.isFinite` check treats a *cleared*
+ * latitude as a perfectly good 0° — which publishes the studio as sitting in the Gulf
+ * of Guinea rather than omitting the claim. Blank has to be rejected before the parse.
+ */
+function coordinate(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
  * ISO 3166-2 subdivision code for the states this studio plausibly works in, so
  * `geo.region` reads `IN-MH` rather than `IN-Maharashtra`.
  *
@@ -153,8 +177,8 @@ export function buildJsonLd({
     .map((url) => url.trim())
     .filter(Boolean);
 
-  const latitude = Number(settings['seo.geoLatitude']);
-  const longitude = Number(settings['seo.geoLongitude']);
+  const latitude = coordinate(settings['seo.geoLatitude']);
+  const longitude = coordinate(settings['seo.geoLongitude']);
   const radiusKm = Number(settings['seo.serviceRadiusKm']);
   // Omitted when blank. See the price note at the top of this file.
   const priceRange = settings['seo.priceRange'].trim();
@@ -180,7 +204,7 @@ export function buildJsonLd({
         addressRegion: settings['brand.region'],
         addressCountry: 'IN',
       },
-      ...(Number.isFinite(latitude) && Number.isFinite(longitude)
+      ...(latitude !== null && longitude !== null
         ? { geo: { '@type': 'GeoCoordinates', latitude, longitude } }
         : {}),
       // The named places the studio lists, plus the circle it will actually travel
@@ -192,7 +216,7 @@ export function buildJsonLd({
           '@type': 'Place',
           name,
         })),
-        ...(Number.isFinite(latitude) && Number.isFinite(longitude) && radiusKm > 0
+        ...(latitude !== null && longitude !== null && radiusKm > 0
           ? [
               {
                 '@type': 'GeoCircle',
@@ -304,14 +328,24 @@ export function jsonLdScript(data: unknown): string {
  * markup. So the trailing prose clause is dropped and the real names are kept.
  */
 function placeNames(serviceArea: string): string[] {
-  return serviceArea
-    .split(/[·,]|\band\b/)
-    .map((part) => part.trim().replace(/[.;]+$/, ''))
-    .filter(Boolean)
-    // A real place name here is one or two words ("Pune", "Navi Mumbai"). Anything
-    // longer, or anything with a linking preposition in it, is the prose tail.
-    .filter((part) => part.split(/\s+/).length <= 3)
-    .filter((part) => !/\b(across|beyond|destinations?|elsewhere|more|others?)\b/i.test(part));
+  return (
+    serviceArea
+      .split(/[·,]|\band\b/)
+      .map((part) => part.trim().replace(/[.;]+$/, ''))
+      .filter(Boolean)
+      // Three tests, because no single one holds. A place name is short, starts with a
+      // capital, and is not one of the vague coverage phrases these lines end with.
+      // "anywhere in India" clears the first two and is caught by the third; "Navi
+      // Mumbai" and "Pimpri-Chinchwad" clear all three.
+      .filter((part) => part.split(/\s+/).length <= 3)
+      .filter((part) => /^\p{Lu}/u.test(part))
+      .filter(
+        (part) =>
+          !/\b(across|beyond|destinations?|elsewhere|anywhere|everywhere|surrounding|nearby|areas?|regions?|more|others?|worldwide|abroad|etc)\b/i.test(
+            part,
+          ),
+      )
+  );
 }
 
 /**

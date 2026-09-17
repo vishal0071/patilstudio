@@ -158,13 +158,14 @@ export function Packages({
         </ul>
 
         {anyPending && (
-          <p
-            data-reveal=""
-            data-nosnippet=""
-            className="mt-8 text-center text-[0.6875rem] text-stone"
-          >
-            {settings['packages.pricingNote']}
-          </p>
+          // The wrapper is a div, not the paragraph itself: Google honours
+          // `data-nosnippet` on div, span and section only, so on a <p> the attribute
+          // is silently ignored and the note stays snippet-eligible.
+          <div data-nosnippet="">
+            <p data-reveal="" className="mt-8 text-center text-[0.6875rem] text-stone">
+              {settings['packages.pricingNote']}
+            </p>
+          </div>
         )}
 
         {/* Custom-package prompt. Most weddings do not fit three columns, and saying so

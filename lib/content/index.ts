@@ -71,25 +71,13 @@ const loadContent = unstable_cache(
 );
 
 /**
- * The cached payload, with the settings defaults re-applied over it.
+ * Every field of `SiteContent`, at its default.
  *
- * That re-merge is not belt-and-braces. `unstable_cache` persists this object to disk
- * and it survives a deploy, so a payload written by the *previous* build can be handed
- * to code from the *new* one — and a settings key added in that deploy is simply absent
- * from it. Every `settings['…']` read in the new code is then `undefined`, and the first
- * `.trim()` or `.split()` on one throws inside `generateMetadata`, which is a 500 on
- * every page of the site until the hour-long revalidate window closes.
- *
- * Merging the defaults back in costs one object spread per request and makes adding a
- * setting a safe deploy instead of a timed outage.
+ * Used both as the fallback when Postgres is unreachable and as the floor under the
+ * cached payload — see `getContent`.
  */
-export const getContent = cache(async (): Promise<SiteContent> => {
-  const content = await loadContent();
-  return { ...content, settings: { ...settingDefaults, ...content.settings } };
-});
-
-async function readContent(): Promise<SiteContent> {
-  const fallback = (): SiteContent => ({
+function fallback(): SiteContent {
+  return {
     settings: { ...settingDefaults } as Settings,
     services: defaultServices,
     portfolio: defaultPortfolio,
@@ -106,8 +94,38 @@ async function readContent(): Promise<SiteContent> {
     // page is better than an empty one — but a location page invented by this repository
     // would be exactly the thin, templated content the guard exists to prevent.
     areas: [],
-  });
+  };
+}
 
+/**
+ * The cached payload, with the defaults re-applied underneath it.
+ *
+ * This is not belt-and-braces. `unstable_cache` persists the payload to disk and it
+ * survives a deploy, so a payload written by the *previous* build can be handed to code
+ * from the *new* one — and any field added in that deploy is simply absent from it. The
+ * new code then reads `undefined` and the first method call on it throws: a settings key
+ * takes down `generateMetadata`, and a missing collection takes down whatever renders it.
+ * `areas` did exactly this — added one deploy ago, and `sitemap.ts` reads `areas.length`
+ * unguarded. Either way it is a 500 on every affected page until the hour-long revalidate
+ * window closes, which is the worst possible shape for a bug: invisible in review,
+ * invisible in staging, and triggered by the deploy itself.
+ *
+ * Spreading the defaults underneath fixes the whole class rather than the two instances
+ * of it. A key absent from the cached object keeps its default; a key present — including
+ * one legitimately empty, like `areas: []` — wins, because object spread copies own
+ * properties whether or not their value is empty. Settings merge one level deeper, since
+ * a cached settings object is a complete map that may be missing individual keys.
+ */
+export const getContent = cache(async (): Promise<SiteContent> => {
+  const content = await loadContent();
+  return {
+    ...fallback(),
+    ...content,
+    settings: { ...settingDefaults, ...content.settings },
+  };
+});
+
+async function readContent(): Promise<SiteContent> {
   try {
     const [
       settingRows,

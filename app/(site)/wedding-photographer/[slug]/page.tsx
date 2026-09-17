@@ -33,6 +33,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       area.seoDescription ||
       `${settings['brand.name']} photographs weddings in ${where}. ${area.intro.slice(0, 150).trim()}…`,
     path: `/wedding-photographer/${area.slug}`,
+    // So the geo meta names this locality rather than the studio's own city, which
+    // would contradict the `areaServed` in this page's own JSON-LD.
+    place: area.name,
   });
 }
 
