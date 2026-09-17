@@ -68,7 +68,7 @@ export default async function AdminDashboard() {
       done: pendingPrices === 0,
       label: `Publish real package prices (${pendingPrices} still marked as placeholders)`,
       href: '/admin/collections/packages',
-      note: 'Cards say “Placeholder — not a quote” while the flag is on.',
+      note: 'Cards say “Placeholder — not a quote” while the flag is on. Prices are never published to search engines either way, so this does not hold up indexing.',
     },
     {
       done: placeholderTestimonials === 0 && counts.testimonials > 0,
@@ -101,7 +101,13 @@ export default async function AdminDashboard() {
       done: isOn(settings['seo.indexable']),
       label: 'Allow search engines to index the site',
       href: '/admin/settings',
-      note: 'Leave off until launch. While off, robots.txt disallows everything.',
+      note: 'The master switch. While off, robots.txt disallows everything and every page is noindex — the site cannot appear in Google at all, however good the rest of it is.',
+    },
+    {
+      done: Boolean(settings['seo.googleSiteVerification']),
+      label: 'Verify the site in Google Search Console',
+      href: '/admin/settings',
+      note: 'Paste the HTML-tag token into seo.googleSiteVerification, then submit /sitemap.xml. This is how you see which Pune searches bring people here.',
     },
   ];
 

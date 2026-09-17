@@ -260,7 +260,11 @@ export function EnquiryForm({ copy }: { copy: EnquiryFormCopy }) {
         <Field name="eventCount" label="Number of events" placeholder="e.g. Haldi, wedding, reception" />
       </div>
 
-      <Select name="budget" label="Approximate budget" options={BUDGET_BANDS} />
+      {/* Rupee bands, kept out of search snippets for the same reason as the package
+          figures — they are a question the studio asks, not a price it quotes. */}
+      <div data-nosnippet="">
+        <Select name="budget" label="Approximate budget" options={BUDGET_BANDS} />
+      </div>
 
       <fieldset>
         <legend className="field-label">Services required</legend>

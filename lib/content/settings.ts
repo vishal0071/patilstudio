@@ -135,10 +135,25 @@ export const settingDefaults = {
   'seo.keywords':
     'Ganesh Patil Photography, wedding photographer Pune, wedding photography Pune, pre wedding photographer Pune, candid wedding photography Pune, wedding videography Pune, cinematic wedding photographer Pune, photography studio Pune',
   'seo.ogImagePath': '',
-  'seo.priceRange': '₹₹',
+  // Empty on purpose: no price signal is published to search engines. Schema.org's
+  // `priceRange` is what puts a "₹₹" band next to a business in Google's local results,
+  // and the studio quotes per celebration rather than off a rate card. Type a band here
+  // only if you actively want one shown; anything non-empty is emitted verbatim.
+  'seo.priceRange': '',
   'seo.foundingYear': '2017',
   'seo.geoLatitude': '18.5204',
   'seo.geoLongitude': '73.8567',
+  // Kilometres around the coordinates above that the studio will travel to for a
+  // wedding, published as the service radius. This is the local-search claim that
+  // "we cover Pune and around it" — keep it honest, an inflated radius competes for
+  // enquiries the studio would turn down.
+  'seo.serviceRadiusKm': '150',
+  // The `content` value from the Google Search Console HTML-tag verification method
+  // (just the token, not the whole <meta> tag). Needed once, to prove ownership and
+  // submit the sitemap; harmless to leave set afterwards.
+  'seo.googleSiteVerification': '',
+  // Same, for Bing Webmaster Tools. Optional.
+  'seo.bingSiteVerification': '',
   // OFF by default, deliberately. A fresh deploy has no photographs, placeholder prices
   // and placeholder testimonials; letting Google index that is worse than not being
   // indexed for a few days, and cached placeholder pages are slow to shift. The dashboard

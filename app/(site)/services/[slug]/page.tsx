@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getContent } from '@/lib/content';
-import { buildBreadcrumbs, buildMetadata, jsonLdScript } from '@/lib/seo';
+import { buildBreadcrumbs, buildMetadata, buildServiceJsonLd, jsonLdScript } from '@/lib/seo';
 import { paragraphs, whatsappHref } from '@/lib/site';
 import { Frame } from '@/components/ui/frame';
 import { ArrowRightIcon, CheckIcon, WhatsAppIcon } from '@/components/ui/icons';
@@ -29,7 +29,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   return buildMetadata(settings, {
     title: `${service.title} in ${settings['brand.city']}`,
-    description: service.blurb,
+    // The studio's blurb, then where it works. A description that never names the city
+    // competes only for "wedding cinematography"; naming it once, in a true sentence,
+    // is the difference between that and "wedding cinematography in Pune".
+    description: `${service.blurb} ${settings['brand.name']} covers ${settings['brand.city']} and ${settings['brand.region']}.`,
     path: `/services/${service.slug}`,
   });
 }
@@ -50,11 +53,16 @@ export default async function ServicePage({ params }: Params) {
     { name: service.title, path: `/services/${service.slug}` },
   ]);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [breadcrumbs, buildServiceJsonLd(settings, service)],
+  };
+
   return (
     <div className="bg-ivory">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbs) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
       <header className="relative isolate min-h-[62svh] overflow-hidden bg-ink text-ivory">

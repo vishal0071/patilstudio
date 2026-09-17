@@ -70,7 +70,23 @@ const loadContent = unstable_cache(
   { tags: [CONTENT_TAG], revalidate: 3600 },
 );
 
-export const getContent = cache((): Promise<SiteContent> => loadContent());
+/**
+ * The cached payload, with the settings defaults re-applied over it.
+ *
+ * That re-merge is not belt-and-braces. `unstable_cache` persists this object to disk
+ * and it survives a deploy, so a payload written by the *previous* build can be handed
+ * to code from the *new* one — and a settings key added in that deploy is simply absent
+ * from it. Every `settings['…']` read in the new code is then `undefined`, and the first
+ * `.trim()` or `.split()` on one throws inside `generateMetadata`, which is a 500 on
+ * every page of the site until the hour-long revalidate window closes.
+ *
+ * Merging the defaults back in costs one object spread per request and makes adding a
+ * setting a safe deploy instead of a timed outage.
+ */
+export const getContent = cache(async (): Promise<SiteContent> => {
+  const content = await loadContent();
+  return { ...content, settings: { ...settingDefaults, ...content.settings } };
+});
 
 async function readContent(): Promise<SiteContent> {
   const fallback = (): SiteContent => ({

@@ -91,19 +91,27 @@ export function Packages({
                       {pkg.tagline}
                     </p>
 
-                    <p
-                      className={`numeral mt-6 text-2xl ${featured ? 'text-gold-soft' : 'text-gold-dim'}`}
-                      {...editableRow('packages', pkg.id, 'priceLabel')}
-                    >
-                      {pkg.priceLabel}
-                    </p>
-                    {pkg.pricePending && (
+                    {/* `data-nosnippet` keeps the figure out of search results while
+                        leaving it perfectly visible on the page. Google honours it for
+                        snippets and AI overviews alike, so a rupee number can never be
+                        lifted out of context and read as a quote the studio gave — and
+                        a placeholder '₹XX,XXX' can never be the line a couple sees under
+                        the studio's name in the results. */}
+                    <div data-nosnippet="">
                       <p
-                        className={`mt-1.5 text-[0.625rem] tracking-[0.14em] uppercase ${featured ? 'text-ivory/40' : 'text-stone'}`}
+                        className={`numeral mt-6 text-2xl ${featured ? 'text-gold-soft' : 'text-gold-dim'}`}
+                        {...editableRow('packages', pkg.id, 'priceLabel')}
                       >
-                        Placeholder — not a quote
+                        {pkg.priceLabel}
                       </p>
-                    )}
+                      {pkg.pricePending && (
+                        <p
+                          className={`mt-1.5 text-[0.625rem] tracking-[0.14em] uppercase ${featured ? 'text-ivory/40' : 'text-stone'}`}
+                        >
+                          Placeholder — not a quote
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div
@@ -150,7 +158,11 @@ export function Packages({
         </ul>
 
         {anyPending && (
-          <p data-reveal="" className="mt-8 text-center text-[0.6875rem] text-stone">
+          <p
+            data-reveal=""
+            data-nosnippet=""
+            className="mt-8 text-center text-[0.6875rem] text-stone"
+          >
             {settings['packages.pricingNote']}
           </p>
         )}
