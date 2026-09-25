@@ -30,7 +30,7 @@ export const dynamic = 'force-dynamic';
  * render never straddles midnight with two different years on the page.
  */
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const { settings, services } = await getContent();
+  const { settings, services, areas } = await getContent();
   // Decides whether the on-page editor is served at all. A visitor gets none of its
   // JavaScript; the `data-edit` attributes in the markup are inert without it, and
   // /api/admin/inline re-checks the session on every write regardless.
@@ -54,7 +54,12 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
       <main id="main">{children}</main>
 
-      <SiteFooter settings={settings} services={services} year={new Date().getFullYear()} />
+      <SiteFooter
+        settings={settings}
+        services={services}
+        hasAreas={areas.length > 0}
+        year={new Date().getFullYear()}
+      />
       <FloatingCta settings={settings} />
       <RevealEngine />
       <TiltEngine />

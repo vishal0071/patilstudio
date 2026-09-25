@@ -17,17 +17,19 @@ import { siteBaseUrl } from '@/lib/site';
 // the build machine cannot reach.
 export const dynamic = 'force-dynamic';
 
+// No `lastModified`, deliberately. It used to be `new Date()`, which told Google every
+// page had changed at the moment of each fetch — a claim it checks, finds false, and
+// then stops trusting lastmod from this site at all. Google says to omit the field
+// rather than guess, so it is omitted until a real edit date is threaded through.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { services, areas } = await getContent();
   const base = siteBaseUrl();
-  const now = new Date();
 
   return [
-    { url: `${base}/`, lastModified: now, changeFrequency: 'monthly', priority: 1 },
-    { url: `${base}/portfolio`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${base}/`, changeFrequency: 'monthly', priority: 1 },
+    { url: `${base}/portfolio`, changeFrequency: 'weekly', priority: 0.9 },
     ...services.map((service) => ({
       url: `${base}/services/${service.slug}`,
-      lastModified: now,
       changeFrequency: 'monthly' as const,
       priority: 0.8,
     })),
@@ -37,7 +39,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ? [
           {
             url: `${base}/wedding-photographer`,
-            lastModified: now,
             changeFrequency: 'monthly' as const,
             priority: 0.7,
           },
@@ -45,7 +46,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       : []),
     ...areas.map((area) => ({
       url: `${base}/wedding-photographer/${area.slug}`,
-      lastModified: now,
       changeFrequency: 'monthly' as const,
       // Below the service pages: these support the main keywords rather than competing
       // with them.

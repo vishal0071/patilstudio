@@ -15,12 +15,16 @@ import { ArrowRightIcon } from '@/components/ui/icons';
  * the state a fresh install is in.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const { settings } = await getContent();
-  return buildMetadata(settings, {
+  const { settings, areas } = await getContent();
+  const metadata = buildMetadata(settings, {
     title: `Areas We Cover in ${settings['brand.region']}`,
     description: `Wedding photography across Pune and ${settings['brand.region']} — the localities and cities ${settings['brand.name']} works in.`,
     path: '/wedding-photographer',
   });
+  // Empty, the hub is one line of admin instructions, which Google crawled and then
+  // declined to index. Kept out of the index until an area goes live — the same moment
+  // the sitemap starts listing it and the footer starts linking to it.
+  return areas.length > 0 ? metadata : { ...metadata, robots: { index: false, follow: true } };
 }
 
 export default async function AreasHubPage() {

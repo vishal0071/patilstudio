@@ -79,6 +79,10 @@ services:
       # Router names must be unique across the whole Traefik instance — `web`,
       # `app`, `api`, `web-secure`, `app-secure`, `api-secure` are already taken by
       # GalleryFlow. Hence the `patil-` prefix.
+      #
+      # www is routed here only so it gets a certificate; the app 308s it to the bare
+      # domain (`redirects()` in next.config.ts). Do not drop it from this rule — an
+      # uncertified www is a TLS error, not a redirect.
       - traefik.http.routers.patil-secure.rule=Host(`${SITE_DOMAIN}`) || Host(`www.${SITE_DOMAIN}`)
       - traefik.http.routers.patil-secure.entrypoints=websecure
       - traefik.http.routers.patil-secure.tls.certresolver=le

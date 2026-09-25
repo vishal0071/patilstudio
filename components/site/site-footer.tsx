@@ -20,10 +20,13 @@ import {
 export function SiteFooter({
   settings,
   services,
+  hasAreas,
   year,
 }: {
   settings: Settings;
   services: Service[];
+  /** Whether any location page is live — the hub is not linked until one is. */
+  hasAreas: boolean;
   /** Passed in from the page so the whole tree renders from one clock reading. */
   year: number;
 }) {
@@ -163,10 +166,14 @@ export function SiteFooter({
               Full Portfolio
             </Link>
             {/* Keeps the location pages reachable by a crawler and a reader. Orphaned
-                pages rank badly and look like the doorway set this is not. */}
-            <Link href="/wedding-photographer" className="transition-colors hover:text-ivory">
-              Areas We Cover
-            </Link>
+                pages rank badly and look like the doorway set this is not. Hidden while
+                there are none: an empty hub linked from every page is a thin page that
+                every crawl finds. */}
+            {hasAreas && (
+              <Link href="/wedding-photographer" className="transition-colors hover:text-ivory">
+                Areas We Cover
+              </Link>
+            )}
             <Link href="/#contact" className="transition-colors hover:text-ivory">
               Book Your Date
             </Link>

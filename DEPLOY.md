@@ -275,7 +275,7 @@ Do this from your laptop, not over SSH — half of what you are testing is DNS a
 curl -sI https://patilstudio.in | head -3          # 200, valid certificate
 curl -s  https://patilstudio.in/api/health         # {"status":"ok"}
 curl -sI http://patilstudio.in | head -3           # 301 -> https
-curl -sI https://www.patilstudio.in | head -3      # 200
+curl -sI https://www.patilstudio.in | head -3      # 308 -> https://patilstudio.in/
 curl -s  https://patilstudio.in/robots.txt         # names the sitemap
 ```
 

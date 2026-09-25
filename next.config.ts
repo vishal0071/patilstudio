@@ -74,6 +74,15 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   poweredByHeader: false,
 
+  // LOAD-BEARING FOR SEARCH. Since 15.2, Next streams `generateMetadata` output into
+  // <body> for every user agent not on its short bot list — and Googlebot is not on it.
+  // The title, description, robots tag and canonical then arrive in a hidden div 40KB
+  // below </head>, and Google ignores a rel=canonical outside <head>: Search Console
+  // reported the site's pages as "Duplicate without user-selected canonical" for exactly
+  // this reason. Matching every user agent puts the metadata back in <head>. It costs
+  // nothing here — each page awaits the same cached `getContent()` its metadata does.
+  htmlLimitedBots: /.*/,
+
   images: {
     // AVIF first, WebP second, original as the last resort. On a photography site this
     // is the single largest performance lever there is.
@@ -98,6 +107,26 @@ const nextConfig: NextConfig = {
       {
         source: '/fonts/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+    ];
+  },
+
+  /**
+   * www → the bare domain, permanently.
+   *
+   * Traefik routes both hosts here (docker-compose.yml) so that www gets a certificate,
+   * but serving the page on both made every URL a duplicate of itself. The canonical tag
+   * alone is a hint Google may overrule; a redirect is not. The host is matched as a
+   * pattern rather than named, because this is evaluated at build time and SITE_DOMAIN
+   * is a runtime value.
+   */
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www\\.(?<apex>.+)' }],
+        destination: 'https://:apex/:path*',
+        permanent: true,
       },
     ];
   },
